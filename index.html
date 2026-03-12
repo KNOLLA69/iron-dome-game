@@ -40,6 +40,118 @@ const ctx = canvas.getContext('2d');
 const isMobileDevice = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) ||
   ('ontouchstart' in window && window.innerWidth < 1024);
 
+// ==================== i18n LANGUAGE SYSTEM ====================
+const TEXTS = {
+  he: {
+    title: 'כיפת ברזל', subtitle: 'הגנה על תל אביב',
+    start: 'התחל משחק', playAgain: 'שחק שוב',
+    instrAim: 'גע במסך כדי לכוון ולשגר מיירט',
+    instrAimDesktop: 'כוון עם העכבר ולחץ כדי לשגר טיל מיירט',
+    instrCombo: 'בנה קומבו עם יירוטים ברצף להכפלת ניקוד',
+    instrBoss: 'כל 3 גלים מגיע טיל בוס - היכון!',
+    instrWarn: '5 פגיעות בעיר = סוף המשחק',
+    best: 'שיא', score: 'ניקוד', wave: 'גל',
+    missiles: 'טילים', ammo: 'מיירטים',
+    gameOver: 'המשחק נגמר!', finalScore: 'ניקוד סופי',
+    newRecord: 'שיא חדש!',
+    waveComplete: 'הושלם!', nextWave: 'מתכונן לגל',
+    bossWarn: 'אזהרה: בוס מתקרב!',
+    bossIntroWarn: 'אזהרה!', bossApproach: 'בוס גל',
+    sirenAlert: 'צבע אדום! צבע אדום!', sirenPrepare: 'התכוננו ליירוט...',
+    rating: ['נסה שוב...', 'טירון', 'מגן טוב', 'מיירט מצטיין', 'מפקד סוללה', 'אלוף כיפת ברזל!'],
+    waveLabel: 'גל', comboMax: 'קומבו מקסימלי',
+    batteryLabel: 'כיפת ברזל',
+    leaderboard: 'טבלת שיאים', enterName: 'הכנס שם (עד 6 תווים)', submit: 'שלח',
+    noAmmo: 'אין מיירטים!', outOfAmmo: 'נגמרו המיירטים'
+  },
+  en: {
+    title: 'IRON DOME', subtitle: 'Defend Tel Aviv',
+    start: 'Start Game', playAgain: 'Play Again',
+    instrAim: 'Tap the screen to aim and fire interceptor',
+    instrAimDesktop: 'Aim with mouse and click to fire interceptor',
+    instrCombo: 'Build combos with consecutive intercepts for score multiplier',
+    instrBoss: 'Boss missile every 3 waves - get ready!',
+    instrWarn: '5 city hits = Game Over',
+    best: 'BEST', score: 'SCORE', wave: 'Wave',
+    missiles: 'missiles', ammo: 'interceptors',
+    gameOver: 'GAME OVER', finalScore: 'FINAL SCORE',
+    newRecord: 'NEW RECORD!',
+    waveComplete: 'complete!', nextWave: 'Preparing wave',
+    bossWarn: 'Warning: boss approaching!',
+    bossIntroWarn: 'WARNING!', bossApproach: 'Wave boss',
+    sirenAlert: 'RED ALERT! RED ALERT!', sirenPrepare: 'Prepare to intercept...',
+    rating: ['Try again...', 'Rookie', 'Good defender', 'Top interceptor', 'Battery commander', 'Iron Dome champion!'],
+    waveLabel: 'Wave', comboMax: 'Max combo',
+    batteryLabel: 'IRON DOME',
+    leaderboard: 'LEADERBOARD', enterName: 'Enter name (max 6 chars)', submit: 'Submit',
+    noAmmo: 'No ammo!', outOfAmmo: 'Out of interceptors'
+  },
+  de: {
+    title: 'IRON DOME', subtitle: 'Tel Aviv verteidigen',
+    start: 'Spiel starten', playAgain: 'Nochmal spielen',
+    instrAim: 'Bildschirm berühren um zu zielen und abzufeuern',
+    instrAimDesktop: 'Mit Maus zielen und klicken zum Abfeuern',
+    instrCombo: 'Kombos aufbauen für Punktemultiplikator',
+    instrBoss: 'Alle 3 Wellen kommt ein Boss - Achtung!',
+    instrWarn: '5 Stadttreffer = Spiel vorbei',
+    best: 'BEST', score: 'PUNKTE', wave: 'Welle',
+    missiles: 'Raketen', ammo: 'Abfangjäger',
+    gameOver: 'SPIEL VORBEI', finalScore: 'ENDPUNKTZAHL',
+    newRecord: 'NEUER REKORD!',
+    waveComplete: 'geschafft!', nextWave: 'Nächste Welle',
+    bossWarn: 'Warnung: Boss naht!',
+    bossIntroWarn: 'WARNUNG!', bossApproach: 'Wellen-Boss',
+    sirenAlert: 'ALARM! ALARM!', sirenPrepare: 'Abfangen vorbereiten...',
+    rating: ['Nochmal...', 'Anfänger', 'Guter Verteidiger', 'Top-Abfänger', 'Batterie-Kommandant', 'Iron Dome Champion!'],
+    waveLabel: 'Welle', comboMax: 'Max Kombo',
+    batteryLabel: 'IRON DOME',
+    leaderboard: 'BESTENLISTE', enterName: 'Name eingeben (max 6)', submit: 'Senden',
+    noAmmo: 'Keine Munition!', outOfAmmo: 'Abfangjäger leer'
+  }
+};
+let currentLang = localStorage.getItem('ironDomeLang') || 'he';
+function t(key) { return TEXTS[currentLang][key] || key; }
+function isRTL() { return currentLang === 'he'; }
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('ironDomeLang', lang);
+  document.documentElement.lang = lang === 'he' ? 'he' : lang === 'de' ? 'de' : 'en';
+  document.documentElement.dir = isRTL() ? 'rtl' : 'ltr';
+}
+setLang(currentLang);
+
+// ==================== FIREBASE LEADERBOARD ====================
+const FIREBASE_URL = 'https://iron-dome-default-rtdb.firebaseio.com'; // User will update
+let leaderboardData = [];
+let leaderboardLoading = false;
+
+async function fetchLeaderboard() {
+  leaderboardLoading = true;
+  try {
+    const res = await fetch(`${FIREBASE_URL}/leaderboard.json?orderBy="score"&limitToLast=10`);
+    if (!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+    if (data) {
+      leaderboardData = Object.values(data).sort((a, b) => b.score - a.score).slice(0, 10);
+    } else {
+      leaderboardData = [];
+    }
+  } catch (e) { leaderboardData = []; }
+  leaderboardLoading = false;
+}
+
+async function submitScore(name, score, wave) {
+  try {
+    await fetch(`${FIREBASE_URL}/leaderboard.json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.toUpperCase().slice(0, 6), score, wave, date: Date.now() })
+    });
+    await fetchLeaderboard();
+  } catch (e) {}
+}
+fetchLeaderboard();
+
 if (isMobileDevice) {
   const vw = window.innerWidth || 500;
   const vh = window.innerHeight || 900;
@@ -553,7 +665,7 @@ function generateCityCanvas() {
 generateCityCanvas();
 
 // ==================== GAME STATE ====================
-let state = 'menu';
+let state = 'menu'; // 'menu', 'playing', 'gameover', 'nameinput'
 let score = 0, lives = 5, wave = 0;
 let waveState = 'playing';
 let waveMissilesLeft = 0, waveTransitionTimer = 0, bossIntroTimer = 0;
@@ -572,6 +684,17 @@ let sirenTimer = 0;
 let airplane = null;
 let airplaneTimer = 0;
 const AIRPLANE_INTERVAL = 1800; // ~30 seconds at 60fps
+// Arsenal / ammo system
+let ammo = 0, maxAmmo = 0;
+// Button rects for hit testing
+let startBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+let playAgainBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+let submitBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+let langBtnRects = []; // [{x,y,w,h,lang}]
+// Name input for leaderboard
+let nameInput = '';
+let nameInputActive = false;
+let showLeaderboard = false;
 
 // Stars with layers
 for (let i = 0; i < 200; i++) {
@@ -736,19 +859,79 @@ function updateAim(clientX, clientY) {
   if (batteryAngle < -Math.PI + 0.15) batteryAngle = -Math.PI + 0.15;
 }
 
-function handleFire() {
+function isInBtn(x, y, r) {
+  return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+}
+
+function handleClick() {
   if (audioCtx.state === 'suspended') audioCtx.resume();
-  if (state === 'menu') { startGame(); return; }
-  if (state === 'gameover') { startGame(); return; }
+  // Check language buttons on any screen
+  for (const lb of langBtnRects) {
+    if (isInBtn(mouseX, mouseY, lb)) { setLang(lb.lang); return; }
+  }
+  if (state === 'menu') {
+    if (showLeaderboard) { showLeaderboard = false; return; }
+    if (isInBtn(mouseX, mouseY, startBtnRect)) { startGame(); }
+    return;
+  }
+  if (state === 'nameinput') {
+    if (isInBtn(mouseX, mouseY, submitBtnRect) && nameInput.length > 0) {
+      submitScore(nameInput, score, wave);
+      state = 'gameover'; nameInputActive = false; showLeaderboard = true;
+      return;
+    }
+    // Mobile keyboard character detection
+    if (isMobile) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      const cols = 9, charBtnSize = Math.min(36, (W - 40) / cols);
+      const cy = H * 0.3;
+      const boxH = 40, boxY = cy + 100;
+      const kbY = boxY + boxH + 24;
+      const kbX = W/2 - (cols * charBtnSize) / 2;
+      for (let i = 0; i < chars.length; i++) {
+        const col = i % cols, row = Math.floor(i / cols);
+        const cx = kbX + col * charBtnSize, cy2 = kbY + row * charBtnSize;
+        if (isInBtn(mouseX, mouseY, {x:cx, y:cy2, w:charBtnSize, h:charBtnSize})) {
+          if (nameInput.length < 6) nameInput += chars[i];
+          return;
+        }
+      }
+      // Backspace button
+      const actionY = kbY + Math.ceil(chars.length / cols) * charBtnSize + 8;
+      if (isInBtn(mouseX, mouseY, {x: W/2 - 90, y: actionY, w: 80, h: 34})) {
+        nameInput = nameInput.slice(0, -1);
+        return;
+      }
+    }
+    return;
+  }
+  if (state === 'gameover') {
+    if (isInBtn(mouseX, mouseY, playAgainBtnRect)) { showLeaderboard = false; startGame(); }
+    return;
+  }
   if (state === 'playing' && (waveState === 'playing' || waveState === 'boss')) fireInterceptor();
 }
+
+// Keyboard for name input
+document.addEventListener('keydown', (e) => {
+  if (state === 'nameinput') {
+    if (e.key === 'Backspace') { nameInput = nameInput.slice(0, -1); e.preventDefault(); }
+    else if (e.key === 'Enter' && nameInput.length > 0) {
+      submitScore(nameInput, score, wave);
+      state = 'gameover'; nameInputActive = false; showLeaderboard = true;
+    }
+    else if (e.key.length === 1 && nameInput.length < 6) {
+      nameInput += e.key.toUpperCase(); e.preventDefault();
+    }
+  }
+});
 
 // Mouse events (desktop)
 canvas.addEventListener('mousemove', (e) => {
   updateAim(e.clientX, e.clientY);
 });
 canvas.addEventListener('click', () => {
-  handleFire();
+  handleClick();
 });
 
 // Touch events (mobile)
@@ -756,7 +939,7 @@ canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
   const touch = e.touches[0];
   updateAim(touch.clientX, touch.clientY);
-  handleFire();
+  handleClick();
 }, { passive: false });
 
 let touchFireInterval = null;
@@ -802,7 +985,12 @@ function startGame() {
 
 function startWave() {
   wave++;
-  waveMissilesLeft = getWaveConfig(wave).missiles;
+  const cfg = getWaveConfig(wave);
+  waveMissilesLeft = cfg.missiles;
+  // Arsenal: 2x total threats (missiles + boss HP if boss wave)
+  const totalThreats = cfg.missiles + (cfg.hasBoss ? cfg.bossHP : 0);
+  maxAmmo = totalThreats * 2;
+  ammo = maxAmmo;
   missileTimer = 0; waveState = 'playing';
   waveTransitionTimer = 0; bossIntroTimer = 0;
 }
@@ -820,6 +1008,11 @@ function startBoss() {
 }
 
 function fireInterceptor() {
+  if (ammo <= 0) {
+    addFloat(batteryX, batteryY - 40, t('noAmmo'), '#ff4444', 16);
+    return;
+  }
+  ammo--;
   const speed = 10;
   const dx = mouseX - batteryX, dy = mouseY - batteryY;
   const dist = Math.sqrt(dx*dx + dy*dy);
@@ -911,8 +1104,8 @@ function shake(d) { shakeDuration = Math.max(shakeDuration, d); }
 
 // ==================== UPDATE ====================
 function update() {
-  if (state !== 'playing') return;
   frame++;
+  if (state !== 'playing') return;
 
   if (comboTimer > 0) { comboTimer--; if (comboTimer <= 0) resetCombo(); }
   if (screenFlash > 0) screenFlash -= 0.04;
@@ -1030,10 +1223,15 @@ function update() {
       shake(20); screenFlash = 0.4;
       missiles.splice(i, 1);
       if (lives <= 0) {
-        state = 'gameover'; stopMusic(); playSound('gameover');
+        stopMusic(); playSound('gameover');
         if (score > highScore) {
           highScore = score; localStorage.setItem('ironDomeHS2', String(highScore));
         }
+        // Go to name input for leaderboard
+        nameInput = '';
+        nameInputActive = true;
+        state = 'nameinput';
+        fetchLeaderboard();
       }
     }
   }
@@ -1428,8 +1626,7 @@ function draw() {
   ctx.fillStyle = 'rgba(130, 190, 130, 0.7)';
   ctx.font = 'bold 10px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText('IRON DOME', batteryX, batteryY + 38);
-  ctx.fillText('כיפת ברזל', batteryX, batteryY + 50);
+  ctx.fillText(t('batteryLabel'), batteryX, batteryY + 42);
 
   // Floating texts
   floatingTexts.forEach(ft => {
@@ -1563,6 +1760,7 @@ function draw() {
   }
 
   if (state === 'menu') drawMenu();
+  if (state === 'nameinput') drawNameInput();
   if (state === 'gameover') drawGameOver();
 }
 
@@ -1584,12 +1782,12 @@ function drawSirenIntro() {
   ctx.textAlign = 'center';
   ctx.shadowColor = '#ff0000';
   ctx.shadowBlur = 15;
-  ctx.fillText('צבע אדום! צבע אדום!', W/2, H/2 - 15);
+  ctx.fillText(t('sirenAlert'), W/2, H/2 - 15);
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = '#ffaaaa';
   ctx.font = '16px Arial';
-  ctx.fillText('התכוננו ליירוט...', W/2, H/2 + 18);
+  ctx.fillText(t('sirenPrepare'), W/2, H/2 + 18);
 
   ctx.globalAlpha = 1;
 }
@@ -1628,59 +1826,89 @@ function drawBoss() {
   ctx.fillStyle = '#ff8888';
   ctx.font = 'bold 11px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText(`בוס - גל ${wave}`, bx, barY-5);
+  ctx.fillText(`${t('bossApproach')} ${wave}`, bx, barY-5);
 }
 
 function drawHUD() {
-  // Semi-transparent HUD panel top
-  ctx.fillStyle = 'rgba(0, 10, 20, 0.4)';
+  // Top HUD bar
+  ctx.fillStyle = 'rgba(0, 10, 20, 0.5)';
   ctx.fillRect(0, 0, W, 52);
   ctx.strokeStyle = 'rgba(100, 150, 200, 0.15)';
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, 52); ctx.lineTo(W, 52); ctx.stroke();
 
-  // Score
+  // Score (right)
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 24px Arial';
+  ctx.font = 'bold 22px Arial';
   ctx.textAlign = 'right';
-  ctx.fillText(`${score}`, W - 20, 34);
+  ctx.fillText(`${score}`, W - 15, 30);
   ctx.fillStyle = 'rgba(150,180,220,0.6)';
-  ctx.font = '10px Arial';
-  ctx.fillText('SCORE', W - 20, 48);
-
+  ctx.font = '9px Arial';
+  ctx.fillText(t('score'), W - 15, 44);
   // High score
   ctx.fillStyle = 'rgba(120,140,170,0.5)';
-  ctx.font = '11px Arial';
-  ctx.fillText(`BEST: ${highScore}`, W - 100, 34);
+  ctx.font = '10px Arial';
+  ctx.fillText(`${t('best')}: ${highScore}`, W - 80, 30);
 
-  // Wave
+  // Wave + missiles remaining (center)
   ctx.fillStyle = '#6aacee';
-  ctx.font = 'bold 16px Arial';
+  ctx.font = 'bold 14px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText(`גל ${wave}`, W/2, 22);
-  if (waveState === 'playing' && waveMissilesLeft > 0) {
-    ctx.fillStyle = 'rgba(150,180,220,0.4)';
-    ctx.font = '11px Arial';
-    ctx.fillText(`${waveMissilesLeft + missiles.length} טילים`, W/2, 40);
+  ctx.fillText(`${t('wave')} ${wave}`, W/2, 20);
+  const missilesInPlay = waveMissilesLeft + missiles.length;
+  if ((waveState === 'playing' || waveState === 'boss') && missilesInPlay > 0) {
+    ctx.fillStyle = 'rgba(150,180,220,0.5)';
+    ctx.font = '10px Arial';
+    ctx.fillText(`${missilesInPlay} ${t('missiles')}`, W/2, 35);
   }
 
-  // Lives
+  // Lives (left)
   ctx.textAlign = 'left';
   for (let i = 0; i < 5; i++) {
     ctx.fillStyle = i < lives ? '#ee4444' : 'rgba(80,80,80,0.4)';
-    ctx.font = '18px Arial';
-    ctx.fillText('♥', 18 + i*26, 34);
+    ctx.font = '16px Arial';
+    ctx.fillText('\u2665', 12 + i*22, 30);
+  }
+
+  // Ammo bar (bottom strip)
+  const barH = 6, barMargin = 12;
+  const barW = W - barMargin * 2;
+  const barY = H - barH - 6;
+  ctx.fillStyle = 'rgba(0, 10, 20, 0.4)';
+  ctx.fillRect(0, barY - 18, W, barH + 24);
+  // Bar background
+  ctx.fillStyle = 'rgba(40, 50, 60, 0.6)';
+  ctx.fillRect(barMargin, barY, barW, barH);
+  // Bar fill
+  const ammoRatio = maxAmmo > 0 ? ammo / maxAmmo : 0;
+  const ammoColor = ammoRatio > 0.5 ? '#00cc66' : ammoRatio > 0.2 ? '#ffaa00' : '#ff3333';
+  ctx.fillStyle = ammoColor;
+  ctx.fillRect(barMargin, barY, barW * ammoRatio, barH);
+  // Ammo text
+  ctx.fillStyle = ammoRatio > 0.2 ? 'rgba(200,220,255,0.7)' : '#ff4444';
+  ctx.font = 'bold 10px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${t('ammo')}: ${ammo}/${maxAmmo}`, barMargin, barY - 4);
+  // Out of ammo warning
+  if (ammo <= 0 && state === 'playing') {
+    const blink = Math.sin(frame * 0.15) > 0;
+    if (blink) {
+      ctx.fillStyle = '#ff3333';
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(t('outOfAmmo'), W/2, barY - 14);
+    }
   }
 
   // Combo
   if (combo >= 2) {
     const pulse = 1 + Math.sin(frame*0.15)*0.04;
     ctx.save();
-    ctx.translate(W/2, 72);
+    ctx.translate(W/2, 68);
     ctx.scale(pulse, pulse);
     const mult = getMultiplier();
     ctx.fillStyle = combo >= 10 ? '#ff55ff' : combo >= 6 ? '#ffaa00' : '#ffdd00';
-    ctx.font = `bold ${combo >= 6 ? 20 : 16}px Arial`;
+    ctx.font = `bold ${combo >= 6 ? 18 : 14}px Arial`;
     ctx.textAlign = 'center';
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 4;
@@ -1688,30 +1916,27 @@ function drawHUD() {
     ctx.shadowBlur = 0;
     if (mult > 1) {
       ctx.fillStyle = '#fff';
-      ctx.font = 'bold 11px Arial';
-      ctx.fillText(`MULTIPLIER x${mult}`, 0, 15);
+      ctx.font = 'bold 10px Arial';
+      ctx.fillText(`x${mult}`, 0, 13);
     }
     ctx.restore();
-    // Timer bar
     if (comboTimer > 0) {
-      const bw = 80, bh = 3, bx = W/2 - bw/2, by = 84;
+      const cbw = 60, cbh = 2, cbx = W/2 - cbw/2, cby = 78;
       ctx.fillStyle = 'rgba(40,40,40,0.5)';
-      ctx.fillRect(bx, by, bw, bh);
+      ctx.fillRect(cbx, cby, cbw, cbh);
       ctx.fillStyle = combo >= 6 ? '#ffaa00' : '#ffdd00';
-      ctx.fillRect(bx, by, bw*(comboTimer/120), bh);
+      ctx.fillRect(cbx, cby, cbw*(comboTimer/120), cbh);
     }
   }
 
   // Crosshair
   if (waveState === 'playing' || waveState === 'boss') {
     const cx = mouseX, cy = mouseY;
-    // Outer ring
     ctx.strokeStyle = `rgba(100, 255, 150, ${0.3 + Math.sin(frame*0.08)*0.1})`;
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
     ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI*2); ctx.stroke();
     ctx.setLineDash([]);
-    // Inner cross
     ctx.strokeStyle = 'rgba(100, 255, 150, 0.6)';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -1720,7 +1945,6 @@ function drawHUD() {
     ctx.moveTo(cx, cy-12); ctx.lineTo(cx, cy-5);
     ctx.moveTo(cx, cy+5); ctx.lineTo(cx, cy+12);
     ctx.stroke();
-    // Center dot
     ctx.fillStyle = 'rgba(100, 255, 150, 0.8)';
     ctx.beginPath(); ctx.arc(cx, cy, 1.5, 0, Math.PI*2); ctx.fill();
   }
@@ -1736,14 +1960,14 @@ function drawWaveTransition() {
   ctx.fillStyle = '#4ac8ff';
   ctx.font = 'bold 32px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText(`גל ${wave} הושלם!`, W/2, H/2-8);
+  ctx.fillText(`${t('wave')} ${wave} ${t('waveComplete')}`, W/2, H/2-8);
   ctx.fillStyle = '#8ad8ff';
   ctx.font = '18px Arial';
-  ctx.fillText(`מתכונן לגל ${wave+1}...`, W/2, H/2+22);
+  ctx.fillText(`${t('nextWave')} ${wave+1}...`, W/2, H/2+22);
   if (getWaveConfig(wave+1).hasBoss) {
     ctx.fillStyle = '#ff6666';
     ctx.font = 'bold 15px Arial';
-    ctx.fillText('אזהרה: בוס מתקרב!', W/2, H/2+45);
+    ctx.fillText(t('bossWarn'), W/2, H/2+45);
   }
   ctx.globalAlpha = 1;
 }
@@ -1763,130 +1987,313 @@ function drawBossIntro() {
     ctx.font = `bold ${28+p*14}px Arial`;
     ctx.textAlign = 'center';
     ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 20;
-    ctx.fillText('אזהרה!', W/2, H/2-20);
+    ctx.fillText(t('bossIntroWarn'), W/2, H/2-20);
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#ffaaaa';
     ctx.font = '17px Arial';
-    ctx.fillText(`בוס גל ${wave} מתקרב`, W/2, H/2+12);
+    ctx.fillText(`${t('bossApproach')} ${wave}`, W/2, H/2+12);
   }
+}
+
+function drawLangToggle(baseY) {
+  const langs = [{l:'he',label:'עב'},{l:'en',label:'EN'},{l:'de',label:'DE'}];
+  const bw = 36, bh = 24, gap = 6;
+  const totalW = langs.length * bw + (langs.length-1) * gap;
+  const sx = W/2 - totalW/2;
+  langBtnRects = [];
+  langs.forEach((lang, i) => {
+    const bx = sx + i * (bw + gap);
+    const active = currentLang === lang.l;
+    ctx.fillStyle = active ? 'rgba(0,200,100,0.3)' : 'rgba(50,60,80,0.5)';
+    ctx.beginPath(); ctx.roundRect(bx, baseY, bw, bh, 5); ctx.fill();
+    ctx.strokeStyle = active ? '#00cc66' : 'rgba(100,130,170,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(bx, baseY, bw, bh, 5); ctx.stroke();
+    ctx.fillStyle = active ? '#fff' : '#8899aa';
+    ctx.font = 'bold 11px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(lang.label, bx + bw/2, baseY + 16);
+    langBtnRects.push({x: bx, y: baseY, w: bw, h: bh, lang: lang.l});
+  });
+}
+
+function drawLeaderboardTable(baseY) {
+  ctx.fillStyle = '#6aacee';
+  ctx.font = 'bold 18px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(t('leaderboard'), W/2, baseY);
+  if (leaderboardLoading) {
+    ctx.fillStyle = '#888';
+    ctx.font = '13px Arial';
+    ctx.fillText('...', W/2, baseY + 25);
+    return;
+  }
+  if (leaderboardData.length === 0) {
+    ctx.fillStyle = '#666';
+    ctx.font = '12px Arial';
+    ctx.fillText('-', W/2, baseY + 25);
+    return;
+  }
+  const colW = Math.min(W - 40, 320);
+  const lx = W/2 - colW/2;
+  leaderboardData.forEach((entry, i) => {
+    const ey = baseY + 22 + i * 20;
+    const isTop = i < 3;
+    ctx.fillStyle = isTop ? ['#ffdd00','#cccccc','#cc8844'][i] : 'rgba(180,200,220,0.5)';
+    ctx.font = isTop ? 'bold 12px Arial' : '12px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${i+1}.`, lx, ey);
+    ctx.fillText(entry.name || '???', lx + 24, ey);
+    ctx.textAlign = 'right';
+    ctx.fillText(`${entry.score}`, lx + colW - 50, ey);
+    ctx.fillStyle = 'rgba(130,160,200,0.4)';
+    ctx.font = '10px Arial';
+    ctx.fillText(`${t('wave')} ${entry.wave || '?'}`, lx + colW, ey);
+  });
 }
 
 function drawMenu() {
   ctx.fillStyle = 'rgba(0,5,15,0.8)';
   ctx.fillRect(0,0,W,H);
 
-  // Center menu content vertically
-  const menuCenterY = H * 0.32;
-  const titleY = menuCenterY - 60 + Math.sin(frame*0.025)*5;
-  const fs = isMobile ? 0.85 : 1; // font scale for mobile
+  // Language toggle at top
+  drawLangToggle(12);
+
+  if (showLeaderboard) {
+    drawLeaderboardTable(H * 0.15);
+    // Back hint
+    ctx.fillStyle = 'rgba(150,180,220,0.4)';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, H - 30);
+    return;
+  }
+
+  const menuCenterY = H * 0.28;
+  const titleY = menuCenterY - 40 + Math.sin(frame*0.025)*5;
+  const fs = isMobile ? 0.85 : 1;
 
   // Title glow
   ctx.shadowColor = '#00cc66'; ctx.shadowBlur = 30;
   ctx.fillStyle = '#00dd66';
-  ctx.font = `bold ${Math.round(56*fs)}px Arial`;
+  ctx.font = `bold ${Math.round(48*fs)}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText('כיפת ברזל', W/2, titleY);
+  ctx.fillText(t('title'), W/2, titleY);
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = '#6aacee';
-  ctx.font = `${Math.round(22*fs)}px Arial`;
-  ctx.fillText('הגנה על תל אביב', W/2, titleY + 38*fs);
+  ctx.font = `${Math.round(18*fs)}px Arial`;
+  ctx.fillText(t('subtitle'), W/2, titleY + 32*fs);
 
   // Divider
   ctx.strokeStyle = 'rgba(100,200,255,0.2)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(W/2 - 100, titleY + 55*fs);
-  ctx.lineTo(W/2 + 100, titleY + 55*fs);
+  ctx.moveTo(W/2 - 90, titleY + 48*fs);
+  ctx.lineTo(W/2 + 90, titleY + 48*fs);
   ctx.stroke();
 
   ctx.fillStyle = '#bbb';
-  ctx.font = `${Math.round(14*fs)}px Arial`;
-  const iy = titleY + 80*fs;
-  ctx.fillText(isMobile ? 'גע במסך כדי לכוון ולשגר מיירט' : 'כוון עם העכבר ולחץ כדי לשגר טיל מיירט', W/2, iy);
-  ctx.fillText('בנה קומבו עם יירוטים ברצף להכפלת ניקוד', W/2, iy+26);
-  ctx.fillText('כל 3 גלים מגיע טיל בוס - היכון!', W/2, iy+52);
+  ctx.font = `${Math.round(12*fs)}px Arial`;
+  const iy = titleY + 65*fs;
+  ctx.fillText(isMobile ? t('instrAim') : t('instrAimDesktop'), W/2, iy);
+  ctx.fillText(t('instrCombo'), W/2, iy+22);
+  ctx.fillText(t('instrBoss'), W/2, iy+44);
   ctx.fillStyle = '#ff8888';
-  ctx.fillText('5 פגיעות בעיר = סוף המשחק', W/2, iy+78);
+  ctx.fillText(t('instrWarn'), W/2, iy+66);
 
   if (highScore > 0) {
     ctx.fillStyle = '#ffdd00';
-    ctx.font = `${Math.round(15*fs)}px Arial`;
-    ctx.fillText(`שיא: ${highScore}`, W/2, iy+112);
+    ctx.font = `${Math.round(13*fs)}px Arial`;
+    ctx.fillText(`${t('best')}: ${highScore}`, W/2, iy+94);
   }
 
-  // Button
-  const btnY = iy + 138;
-  const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY+50);
+  // Start button
+  const btnW = 220, btnH = 50;
+  const btnY = iy + 114;
+  startBtnRect = { x: W/2 - btnW/2, y: btnY, w: btnW, h: btnH };
+  const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY+btnH);
   btnGrad.addColorStop(0, '#00bb55');
   btnGrad.addColorStop(1, '#008833');
   ctx.fillStyle = btnGrad;
-  ctx.beginPath();
-  ctx.roundRect(W/2-115, btnY, 230, 52, 10);
-  ctx.fill();
+  ctx.beginPath(); ctx.roundRect(startBtnRect.x, btnY, btnW, btnH, 10); ctx.fill();
   ctx.strokeStyle = 'rgba(0,255,100,0.3)';
   ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(W/2-115, btnY, 230, 52, 10);
-  ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(startBtnRect.x, btnY, btnW, btnH, 10); ctx.stroke();
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 24px Arial';
-  ctx.fillText('התחל משחק', W/2, btnY + 34);
+  ctx.font = 'bold 22px Arial';
+  ctx.fillText(t('start'), W/2, btnY + 33);
+
+  // Leaderboard below
+  if (leaderboardData.length > 0) {
+    drawLeaderboardTable(btnY + btnH + 30);
+  }
+}
+
+function drawNameInput() {
+  ctx.fillStyle = 'rgba(0,0,10,0.9)';
+  ctx.fillRect(0,0,W,H);
+
+  const cy = H * 0.3;
+
+  ctx.fillStyle = '#ffdd00';
+  ctx.font = 'bold 28px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${score}`, W/2, cy);
+  ctx.fillStyle = '#fff';
+  ctx.font = '14px Arial';
+  ctx.fillText(t('finalScore'), W/2, cy + 22);
+
+  // Rating
+  const ratings = t('rating');
+  const rColors = ['#888','#aaa','#00cc66','#00ddff','#ffaa00','#ffdd00'];
+  let ri = 0;
+  if (score >= 200) ri = 5;
+  else if (score >= 100) ri = 4;
+  else if (score >= 50) ri = 3;
+  else if (score >= 20) ri = 2;
+  else if (score >= 5) ri = 1;
+  ctx.fillStyle = rColors[ri];
+  ctx.font = 'bold 18px Arial';
+  ctx.fillText(ratings[ri], W/2, cy + 52);
+
+  // Name input prompt
+  ctx.fillStyle = '#6aacee';
+  ctx.font = '14px Arial';
+  ctx.fillText(t('enterName'), W/2, cy + 90);
+
+  // Name input box
+  const boxW = 180, boxH = 40;
+  const boxX = W/2 - boxW/2, boxY = cy + 100;
+  ctx.fillStyle = 'rgba(20,30,50,0.8)';
+  ctx.strokeStyle = '#4488cc';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, boxH, 6); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, boxH, 6); ctx.stroke();
+  // Name text
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 24px monospace';
+  ctx.textAlign = 'center';
+  const displayName = nameInput + (Math.sin(frame*0.1) > 0 ? '_' : ' ');
+  ctx.fillText(displayName, W/2, boxY + 28);
+  // char count
+  ctx.fillStyle = 'rgba(150,180,220,0.4)';
+  ctx.font = '10px Arial';
+  ctx.fillText(`${nameInput.length}/6`, W/2 + boxW/2 - 10, boxY + boxH + 14);
+
+  // On mobile, show simple character buttons
+  if (isMobile) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const cols = 9, charBtnSize = Math.min(36, (W - 40) / cols);
+    const kbY = boxY + boxH + 24;
+    const kbX = W/2 - (cols * charBtnSize) / 2;
+    for (let i = 0; i < chars.length; i++) {
+      const col = i % cols, row = Math.floor(i / cols);
+      const cx = kbX + col * charBtnSize, cy2 = kbY + row * charBtnSize;
+      ctx.fillStyle = 'rgba(40,50,70,0.7)';
+      ctx.beginPath(); ctx.roundRect(cx+1, cy2+1, charBtnSize-2, charBtnSize-2, 4); ctx.fill();
+      ctx.fillStyle = '#ddd';
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(chars[i], cx + charBtnSize/2, cy2 + charBtnSize/2 + 5);
+    }
+    // Backspace and Submit buttons
+    const actionY = kbY + Math.ceil(chars.length / cols) * charBtnSize + 8;
+    // Backspace
+    ctx.fillStyle = 'rgba(150,50,50,0.6)';
+    const bsW = 80, bsH = 34;
+    ctx.beginPath(); ctx.roundRect(W/2 - bsW - 10, actionY, bsW, bsH, 6); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText('\u232B', W/2 - bsW/2 - 10, actionY + 22);
+    // Submit
+    const subBtnW = 80, subBtnH = 34;
+    const subBtnX = W/2 + 10;
+    submitBtnRect = { x: subBtnX, y: actionY, w: subBtnW, h: subBtnH };
+    ctx.fillStyle = nameInput.length > 0 ? 'rgba(0,150,80,0.7)' : 'rgba(50,60,70,0.4)';
+    ctx.beginPath(); ctx.roundRect(subBtnX, actionY, subBtnW, subBtnH, 6); ctx.fill();
+    ctx.fillStyle = nameInput.length > 0 ? '#fff' : '#666';
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText(t('submit'), subBtnX + subBtnW/2, actionY + 22);
+  } else {
+    // Desktop: type with keyboard hint
+    const subBtnW = 120, subBtnH = 38;
+    const subBtnY = boxY + boxH + 24;
+    submitBtnRect = { x: W/2 - subBtnW/2, y: subBtnY, w: subBtnW, h: subBtnH };
+    ctx.fillStyle = nameInput.length > 0 ? 'rgba(0,150,80,0.7)' : 'rgba(50,60,70,0.4)';
+    ctx.beginPath(); ctx.roundRect(submitBtnRect.x, subBtnY, subBtnW, subBtnH, 8); ctx.fill();
+    ctx.fillStyle = nameInput.length > 0 ? '#fff' : '#666';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(t('submit'), W/2, subBtnY + 25);
+  }
 }
 
 function drawGameOver() {
   ctx.fillStyle = 'rgba(0,0,10,0.88)';
   ctx.fillRect(0,0,W,H);
 
-  // Center game over vertically
-  const goY = H * 0.25;
+  // Language toggle
+  drawLangToggle(12);
+
+  const goY = H * 0.18;
 
   ctx.fillStyle = '#ff4444';
-  ctx.font = 'bold 46px Arial';
+  ctx.font = 'bold 40px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText('המשחק נגמר!', W/2, goY);
+  ctx.fillText(t('gameOver'), W/2, goY);
 
   ctx.fillStyle = '#fff';
-  ctx.font = '30px Arial';
-  ctx.fillText(`${score}`, W/2, goY + 55);
+  ctx.font = '28px Arial';
+  ctx.fillText(`${score}`, W/2, goY + 45);
   ctx.fillStyle = 'rgba(150,180,220,0.5)';
-  ctx.font = '13px Arial';
-  ctx.fillText('FINAL SCORE', W/2, goY + 75);
+  ctx.font = '12px Arial';
+  ctx.fillText(t('finalScore'), W/2, goY + 63);
 
   if (score >= highScore && score > 0) {
     ctx.fillStyle = '#ffdd00';
-    ctx.font = 'bold 18px Arial';
-    ctx.fillText('שיא חדש!', W/2, goY + 105);
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText(t('newRecord'), W/2, goY + 88);
   } else {
     ctx.fillStyle = '#888';
-    ctx.font = '14px Arial';
-    ctx.fillText(`שיא: ${highScore}`, W/2, goY + 105);
+    ctx.font = '13px Arial';
+    ctx.fillText(`${t('best')}: ${highScore}`, W/2, goY + 88);
   }
 
   ctx.fillStyle = '#88bbff';
-  ctx.font = '16px Arial';
-  ctx.fillText(`גל: ${wave}  |  קומבו מקסימלי: ${maxCombo}`, W/2, goY + 140);
+  ctx.font = '14px Arial';
+  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, goY + 115);
 
-  let rating, rc;
-  if (score >= 200) { rating = 'אלוף כיפת ברזל!'; rc = '#ffdd00'; }
-  else if (score >= 100) { rating = 'מפקד סוללה'; rc = '#ffaa00'; }
-  else if (score >= 50) { rating = 'מיירט מצטיין'; rc = '#00ddff'; }
-  else if (score >= 20) { rating = 'מגן טוב'; rc = '#00cc66'; }
-  else if (score >= 5) { rating = 'טירון'; rc = '#aaa'; }
-  else { rating = 'נסה שוב...'; rc = '#888'; }
-  ctx.fillStyle = rc;
-  ctx.font = 'bold 22px Arial';
-  ctx.fillText(rating, W/2, goY + 185);
+  // Rating
+  const ratings = t('rating');
+  const rColors = ['#888','#aaa','#00cc66','#00ddff','#ffaa00','#ffdd00'];
+  let ri = 0;
+  if (score >= 200) ri = 5;
+  else if (score >= 100) ri = 4;
+  else if (score >= 50) ri = 3;
+  else if (score >= 20) ri = 2;
+  else if (score >= 5) ri = 1;
+  ctx.fillStyle = rColors[ri];
+  ctx.font = 'bold 20px Arial';
+  ctx.fillText(ratings[ri], W/2, goY + 150);
 
-  const btnY = goY + 215;
-  const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY+48);
+  // Play again button
+  const btnW = 200, btnH = 46;
+  const btnY = goY + 170;
+  playAgainBtnRect = { x: W/2 - btnW/2, y: btnY, w: btnW, h: btnH };
+  const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY+btnH);
   btnGrad.addColorStop(0, '#00bb55');
   btnGrad.addColorStop(1, '#008833');
   ctx.fillStyle = btnGrad;
-  ctx.beginPath(); ctx.roundRect(W/2-100, btnY, 200, 48, 10); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(playAgainBtnRect.x, btnY, btnW, btnH, 10); ctx.fill();
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 22px Arial';
-  ctx.fillText('שחק שוב', W/2, btnY + 32);
+  ctx.font = 'bold 20px Arial';
+  ctx.fillText(t('playAgain'), W/2, btnY + 30);
+
+  // Leaderboard below
+  if (showLeaderboard || leaderboardData.length > 0) {
+    drawLeaderboardTable(btnY + btnH + 25);
+  }
 }
 
 // ==================== GAME LOOP ====================
