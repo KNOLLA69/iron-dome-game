@@ -705,6 +705,7 @@ let ammo = 0, maxAmmo = 0;
 let startBtnRect = { x: 0, y: 0, w: 0, h: 0 };
 let playAgainBtnRect = { x: 0, y: 0, w: 0, h: 0 };
 let submitBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+let lbBtnRect = { x: 0, y: 0, w: 0, h: 0 }; // leaderboard button
 let langBtnRects = []; // [{x,y,w,h,lang}]
 // Name input for leaderboard
 let nameInput = '';
@@ -886,7 +887,8 @@ function handleClick() {
   }
   if (state === 'menu') {
     if (showLeaderboard) { showLeaderboard = false; return; }
-    if (isInBtn(mouseX, mouseY, startBtnRect)) { startGame(); }
+    if (isInBtn(mouseX, mouseY, startBtnRect)) { startGame(); return; }
+    if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = true; fetchLeaderboard(); return; }
     return;
   }
   if (state === 'nameinput') {
@@ -921,7 +923,8 @@ function handleClick() {
     return;
   }
   if (state === 'gameover') {
-    if (isInBtn(mouseX, mouseY, playAgainBtnRect)) { showLeaderboard = false; startGame(); }
+    if (isInBtn(mouseX, mouseY, playAgainBtnRect)) { showLeaderboard = false; startGame(); return; }
+    if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = !showLeaderboard; if (showLeaderboard) fetchLeaderboard(); return; }
     return;
   }
   if (state === 'playing' && (waveState === 'playing' || waveState === 'boss')) fireInterceptor();
@@ -2140,10 +2143,18 @@ function drawMenu() {
   ctx.font = 'bold 22px Arial';
   ctx.fillText(t('start'), W/2, btnY + 33);
 
-  // Leaderboard below
-  if (leaderboardData.length > 0) {
-    drawLeaderboardTable(btnY + btnH + 30);
-  }
+  // Leaderboard button
+  const lbW = 180, lbH = 36;
+  const lbY = btnY + btnH + 14;
+  lbBtnRect = { x: W/2 - lbW/2, y: lbY, w: lbW, h: lbH };
+  ctx.fillStyle = 'rgba(30,50,80,0.6)';
+  ctx.beginPath(); ctx.roundRect(lbBtnRect.x, lbY, lbW, lbH, 8); ctx.fill();
+  ctx.strokeStyle = 'rgba(100,150,220,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(lbBtnRect.x, lbY, lbW, lbH, 8); ctx.stroke();
+  ctx.fillStyle = '#6aacee';
+  ctx.font = 'bold 15px Arial';
+  ctx.fillText(`\u{1F3C6} ${t('leaderboard')}`, W/2, lbY + 24);
 }
 
 function drawNameInput() {
@@ -2306,9 +2317,22 @@ function drawGameOver() {
   ctx.font = 'bold 20px Arial';
   ctx.fillText(t('playAgain'), W/2, btnY + 30);
 
-  // Leaderboard below
-  if (showLeaderboard || leaderboardData.length > 0) {
-    drawLeaderboardTable(btnY + btnH + 25);
+  // Leaderboard button
+  const lbW2 = 180, lbH2 = 36;
+  const lbY2 = btnY + btnH + 14;
+  lbBtnRect = { x: W/2 - lbW2/2, y: lbY2, w: lbW2, h: lbH2 };
+  ctx.fillStyle = 'rgba(30,50,80,0.6)';
+  ctx.beginPath(); ctx.roundRect(lbBtnRect.x, lbY2, lbW2, lbH2, 8); ctx.fill();
+  ctx.strokeStyle = 'rgba(100,150,220,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(lbBtnRect.x, lbY2, lbW2, lbH2, 8); ctx.stroke();
+  ctx.fillStyle = '#6aacee';
+  ctx.font = 'bold 15px Arial';
+  ctx.fillText(`\u{1F3C6} ${t('leaderboard')}`, W/2, lbY2 + 24);
+
+  // Leaderboard table (toggled by button)
+  if (showLeaderboard) {
+    drawLeaderboardTable(lbY2 + lbH2 + 15);
   }
 }
 
