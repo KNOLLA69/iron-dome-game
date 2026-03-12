@@ -121,7 +121,7 @@ function setLang(lang) {
 setLang(currentLang);
 
 // ==================== FIREBASE LEADERBOARD ====================
-const FIREBASE_URL = 'https://iron-dome-game-c9bba-default-rtdb.firebaseio.com';
+const FIREBASE_URL = 'https://iron-dome-game-c9bba-default-rtdb.asia-southeast1.firebasedatabase.app';
 let leaderboardData = [];
 let leaderboardLoading = false;
 let playerCountry = '';
@@ -143,7 +143,7 @@ function countryToFlag(code) {
 async function fetchLeaderboard() {
   leaderboardLoading = true;
   try {
-    const res = await fetch(`${FIREBASE_URL}/leaderboard.json?orderBy="score"&limitToLast=10`);
+    const res = await fetch(`${FIREBASE_URL}/leaderboard.json`);
     if (!res.ok) throw new Error('fetch failed');
     const data = await res.json();
     if (data) {
