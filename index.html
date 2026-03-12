@@ -140,6 +140,8 @@ function countryToFlag(code) {
   return String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
 }
 
+let leaderboardRaw = {}; // keyed by Firebase key for deletion
+
 async function fetchLeaderboard() {
   leaderboardLoading = true;
   try {
@@ -147,22 +149,47 @@ async function fetchLeaderboard() {
     if (!res.ok) throw new Error('fetch failed');
     const data = await res.json();
     if (data) {
-      leaderboardData = Object.values(data).sort((a, b) => b.score - a.score).slice(0, 10);
+      leaderboardRaw = data;
+      const entries = Object.entries(data).map(([k, v]) => ({ ...v, _key: k }));
+      entries.sort((a, b) => b.score - a.score);
+      leaderboardData = entries.slice(0, 10);
     } else {
+      leaderboardRaw = {};
       leaderboardData = [];
     }
   } catch (e) { leaderboardData = []; }
   leaderboardLoading = false;
 }
 
-async function submitScore(name, score, wave) {
+function qualifiesForLeaderboard(s) {
+  if (s <= 0) return false;
+  if (leaderboardData.length < 10) return true;
+  return s > leaderboardData[leaderboardData.length - 1].score;
+}
+
+async function submitScore(name, sc, wv) {
   try {
+    // Add new score
     await fetch(`${FIREBASE_URL}/leaderboard.json`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.toUpperCase().slice(0, 6), score, wave, country: playerCountry, date: Date.now() })
+      body: JSON.stringify({ name: name.toUpperCase().slice(0, 6), score: sc, wave: wv, country: playerCountry, date: Date.now() })
     });
-    await fetchLeaderboard();
+    // Fetch all, then delete any beyond top 10
+    const res = await fetch(`${FIREBASE_URL}/leaderboard.json`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data) {
+        const entries = Object.entries(data).map(([k, v]) => ({ ...v, _key: k }));
+        entries.sort((a, b) => b.score - a.score);
+        // Delete entries beyond top 10
+        const toDelete = entries.slice(10);
+        for (const e of toDelete) {
+          await fetch(`${FIREBASE_URL}/leaderboard/${e._key}.json`, { method: 'DELETE' });
+        }
+        leaderboardData = entries.slice(0, 10);
+      }
+    }
   } catch (e) {}
 }
 fetchLeaderboard();
@@ -1245,11 +1272,17 @@ function update() {
         if (score > highScore) {
           highScore = score; localStorage.setItem('ironDomeHS2', String(highScore));
         }
-        // Go to name input for leaderboard
+        // Check if score qualifies for top 10
         nameInput = '';
-        nameInputActive = true;
-        state = 'nameinput';
-        fetchLeaderboard();
+        nameInputActive = false;
+        showLeaderboard = false;
+        state = 'gameover';
+        fetchLeaderboard().then(() => {
+          if (qualifiesForLeaderboard(score)) {
+            nameInputActive = true;
+            state = 'nameinput';
+          }
+        });
       }
     }
   }
