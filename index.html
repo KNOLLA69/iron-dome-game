@@ -2263,33 +2263,55 @@ function drawGameOver() {
   // Language toggle
   drawLangToggle(12);
 
-  const goY = H * 0.18;
+  // If leaderboard is open, show full-screen leaderboard with back button
+  if (showLeaderboard) {
+    drawLeaderboardTable(H * 0.15);
+    // Play again button at bottom
+    const btnW = 180, btnH = 40;
+    const btnY = H - 90;
+    playAgainBtnRect = { x: W/2 - btnW/2, y: btnY, w: btnW, h: btnH };
+    const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY+btnH);
+    btnGrad.addColorStop(0, '#00bb55');
+    btnGrad.addColorStop(1, '#008833');
+    ctx.fillStyle = btnGrad;
+    ctx.beginPath(); ctx.roundRect(playAgainBtnRect.x, btnY, btnW, btnH, 10); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 18px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(t('playAgain'), W/2, btnY + 26);
+    // Back hint
+    lbBtnRect = { x: 0, y: H - 40, w: W, h: 40 };
+    ctx.fillStyle = 'rgba(150,180,220,0.4)';
+    ctx.font = '12px Arial';
+    ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, H - 18);
+    return;
+  }
+
+  const goY = H * 0.12;
 
   ctx.fillStyle = '#ff4444';
-  ctx.font = 'bold 40px Arial';
+  ctx.font = 'bold 36px Arial';
   ctx.textAlign = 'center';
   ctx.fillText(t('gameOver'), W/2, goY);
 
+  // Score + best on same area, compact
   ctx.fillStyle = '#fff';
-  ctx.font = '28px Arial';
+  ctx.font = 'bold 32px Arial';
   ctx.fillText(`${score}`, W/2, goY + 45);
-  ctx.fillStyle = 'rgba(150,180,220,0.5)';
-  ctx.font = '12px Arial';
-  ctx.fillText(t('finalScore'), W/2, goY + 63);
-
   if (score >= highScore && score > 0) {
     ctx.fillStyle = '#ffdd00';
-    ctx.font = 'bold 16px Arial';
-    ctx.fillText(t('newRecord'), W/2, goY + 88);
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText(t('newRecord'), W/2, goY + 65);
   } else {
     ctx.fillStyle = '#888';
-    ctx.font = '13px Arial';
-    ctx.fillText(`${t('best')}: ${highScore}`, W/2, goY + 88);
+    ctx.font = '12px Arial';
+    ctx.fillText(`${t('best')}: ${highScore}`, W/2, goY + 65);
   }
 
+  // Wave + combo in one line
   ctx.fillStyle = '#88bbff';
-  ctx.font = '14px Arial';
-  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, goY + 115);
+  ctx.font = '13px Arial';
+  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, goY + 88);
 
   // Rating
   const ratings = t('rating');
@@ -2301,39 +2323,38 @@ function drawGameOver() {
   else if (score >= 20) ri = 2;
   else if (score >= 5) ri = 1;
   ctx.fillStyle = rColors[ri];
-  ctx.font = 'bold 20px Arial';
-  ctx.fillText(ratings[ri], W/2, goY + 150);
+  ctx.font = 'bold 18px Arial';
+  ctx.fillText(ratings[ri], W/2, goY + 115);
 
-  // Play again button
-  const btnW = 200, btnH = 46;
-  const btnY = goY + 170;
-  playAgainBtnRect = { x: W/2 - btnW/2, y: btnY, w: btnW, h: btnH };
-  const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY+btnH);
+  // Buttons side by side
+  const totalW = 310, gap = 10;
+  const playW = 170, playH = 42;
+  const lbW2 = 130, lbH2 = 42;
+  const btnY = goY + 130;
+  const startX = W/2 - totalW/2;
+
+  // Play again
+  playAgainBtnRect = { x: startX, y: btnY, w: playW, h: playH };
+  const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY+playH);
   btnGrad.addColorStop(0, '#00bb55');
   btnGrad.addColorStop(1, '#008833');
   ctx.fillStyle = btnGrad;
-  ctx.beginPath(); ctx.roundRect(playAgainBtnRect.x, btnY, btnW, btnH, 10); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(startX, btnY, playW, playH, 10); ctx.fill();
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 20px Arial';
-  ctx.fillText(t('playAgain'), W/2, btnY + 30);
+  ctx.font = 'bold 17px Arial';
+  ctx.fillText(t('playAgain'), startX + playW/2, btnY + 27);
 
   // Leaderboard button
-  const lbW2 = 180, lbH2 = 36;
-  const lbY2 = btnY + btnH + 14;
-  lbBtnRect = { x: W/2 - lbW2/2, y: lbY2, w: lbW2, h: lbH2 };
-  ctx.fillStyle = 'rgba(30,50,80,0.6)';
-  ctx.beginPath(); ctx.roundRect(lbBtnRect.x, lbY2, lbW2, lbH2, 8); ctx.fill();
-  ctx.strokeStyle = 'rgba(100,150,220,0.3)';
+  const lbX = startX + playW + gap;
+  lbBtnRect = { x: lbX, y: btnY, w: lbW2, h: lbH2 };
+  ctx.fillStyle = 'rgba(30,50,80,0.7)';
+  ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 10); ctx.fill();
+  ctx.strokeStyle = 'rgba(100,150,220,0.4)';
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.roundRect(lbBtnRect.x, lbY2, lbW2, lbH2, 8); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 10); ctx.stroke();
   ctx.fillStyle = '#6aacee';
   ctx.font = 'bold 15px Arial';
-  ctx.fillText(`\u{1F3C6} ${t('leaderboard')}`, W/2, lbY2 + 24);
-
-  // Leaderboard table (toggled by button)
-  if (showLeaderboard) {
-    drawLeaderboardTable(lbY2 + lbH2 + 15);
-  }
+  ctx.fillText(`\u{1F3C6}`, lbX + lbW2/2, btnY + 27);
 }
 
 // ==================== GAME LOOP ====================
