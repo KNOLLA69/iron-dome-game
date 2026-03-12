@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
@@ -15,9 +15,11 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100vw;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   font-family: 'Arial', sans-serif;
   touch-action: none;
   -webkit-touch-callout: none;
@@ -33,8 +35,21 @@ canvas { display: block; cursor: crosshair; }
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-canvas.width = 1100;
-canvas.height = 700;
+
+// Detect mobile early for canvas sizing
+const isMobileDevice = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) ||
+  ('ontouchstart' in window && window.innerWidth < 1024);
+
+if (isMobileDevice) {
+  const vw = window.innerWidth || 500;
+  const vh = window.innerHeight || 900;
+  const aspect = vh / vw;
+  canvas.width = 500;
+  canvas.height = Math.round(500 * Math.min(aspect, 2.2));
+} else {
+  canvas.width = 1100;
+  canvas.height = 700;
+}
 
 // ==================== AUDIO ENGINE ====================
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -345,6 +360,8 @@ function stopMusic() {
 
 // ==================== CONSTANTS ====================
 const W = canvas.width, H = canvas.height;
+const DESIGN_W = 1100; // original design width for scaling
+const scaleX = W / DESIGN_W;
 const GROUND_Y = H - 55;
 const SEA_Y = GROUND_Y + 5;
 const batteryX = W / 2;
@@ -474,43 +491,44 @@ function generateCityCanvas() {
     cctx.fillRect(x, GROUND_Y - bh, 14 + Math.random() * 12, bh);
   }
 
-  // -- Mid layer buildings --
+  // -- Mid layer buildings (scaled to canvas width) --
+  const sx = scaleX; // shorthand
   const midBuildings = [
-    { x: 20, w: 28, h: 120, color: [35, 42, 62] },
-    { x: 55, w: 35, h: 90, color: [38, 45, 65] },
-    { x: 100, w: 22, h: 150, color: [42, 48, 68], antenna: true },
-    { x: 130, w: 40, h: 100, color: [36, 43, 63] },
-    { x: 180, w: 25, h: 170, color: [40, 47, 67], antenna: true },
-    { x: 215, w: 50, h: 80, color: [34, 40, 60] },
-    { x: 700, w: 30, h: 140, color: [38, 44, 64], antenna: true },
-    { x: 740, w: 45, h: 95, color: [35, 42, 62] },
-    { x: 800, w: 25, h: 160, color: [40, 46, 66] },
-    { x: 835, w: 35, h: 110, color: [36, 43, 63] },
-    { x: 880, w: 28, h: 130, color: [38, 45, 65], antenna: true },
-    { x: 920, w: 50, h: 85, color: [34, 40, 60] },
-    { x: 980, w: 30, h: 145, color: [40, 47, 67] },
-    { x: 1020, w: 40, h: 100, color: [36, 42, 62] },
-    { x: 1065, w: 25, h: 120, color: [38, 44, 64], antenna: true },
+    { x: 20*sx, w: 28*sx, h: 120, color: [35, 42, 62] },
+    { x: 55*sx, w: 35*sx, h: 90, color: [38, 45, 65] },
+    { x: 100*sx, w: 22*sx, h: 150, color: [42, 48, 68], antenna: true },
+    { x: 130*sx, w: 40*sx, h: 100, color: [36, 43, 63] },
+    { x: 180*sx, w: 25*sx, h: 170, color: [40, 47, 67], antenna: true },
+    { x: 215*sx, w: 50*sx, h: 80, color: [34, 40, 60] },
+    { x: 700*sx, w: 30*sx, h: 140, color: [38, 44, 64], antenna: true },
+    { x: 740*sx, w: 45*sx, h: 95, color: [35, 42, 62] },
+    { x: 800*sx, w: 25*sx, h: 160, color: [40, 46, 66] },
+    { x: 835*sx, w: 35*sx, h: 110, color: [36, 43, 63] },
+    { x: 880*sx, w: 28*sx, h: 130, color: [38, 45, 65], antenna: true },
+    { x: 920*sx, w: 50*sx, h: 85, color: [34, 40, 60] },
+    { x: 980*sx, w: 30*sx, h: 145, color: [40, 47, 67] },
+    { x: 1020*sx, w: 40*sx, h: 100, color: [36, 42, 62] },
+    { x: 1065*sx, w: 25*sx, h: 120, color: [38, 44, 64], antenna: true },
   ];
   midBuildings.forEach(b => drawBuilding(b.x, b.w, b.h, b));
 
   // -- Azrieli Center (iconic Tel Aviv landmark) --
   // Square tower
-  drawBuilding(370, 48, 260, { color: [50, 60, 85], shape: 'rect' });
+  drawBuilding(370*sx, 48*sx, 260, { color: [50, 60, 85], shape: 'rect' });
   // Round tower (tallest)
-  drawBuilding(425, 44, 290, { color: [55, 65, 90], shape: 'round' });
+  drawBuilding(425*sx, 44*sx, 290, { color: [55, 65, 90], shape: 'round' });
   // Triangle tower
-  drawBuilding(478, 46, 250, { color: [48, 58, 82], shape: 'triangle' });
+  drawBuilding(478*sx, 46*sx, 250, { color: [48, 58, 82], shape: 'triangle' });
 
   // -- Shalom Tower area --
-  drawBuilding(280, 38, 200, { color: [45, 52, 72], antenna: true });
-  drawBuilding(325, 30, 150, { color: [40, 48, 68] });
+  drawBuilding(280*sx, 38*sx, 200, { color: [45, 52, 72], antenna: true });
+  drawBuilding(325*sx, 30*sx, 150, { color: [40, 48, 68] });
 
   // -- Modern towers (Sarona area) --
-  drawBuilding(545, 32, 220, { color: [52, 62, 85], shape: 'spire' });
-  drawBuilding(585, 40, 180, { color: [48, 56, 78] });
-  drawBuilding(635, 28, 240, { color: [55, 65, 88], antenna: true });
-  drawBuilding(670, 35, 160, { color: [44, 52, 74] });
+  drawBuilding(545*sx, 32*sx, 220, { color: [52, 62, 85], shape: 'spire' });
+  drawBuilding(585*sx, 40*sx, 180, { color: [48, 56, 78] });
+  drawBuilding(635*sx, 28*sx, 240, { color: [55, 65, 88], antenna: true });
+  drawBuilding(670*sx, 35*sx, 160, { color: [44, 52, 74] });
 
   // -- Foreground details: Bauhaus-style low buildings --
   for (let x = 0; x < W; x += 22 + Math.random() * 18) {
@@ -707,7 +725,7 @@ function drawLauncherTubes(angle) {
 }
 
 // ==================== EVENTS ====================
-let isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+let isMobile = isMobileDevice;
 
 function updateAim(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
@@ -1141,19 +1159,20 @@ function draw() {
   });
 
   // Moon
+  const moonX = W - 60 * scaleX - 60, moonY = 80;
   ctx.fillStyle = 'rgba(240, 240, 220, 0.9)';
   ctx.beginPath();
-  ctx.arc(W - 120, 80, 25, 0, Math.PI*2);
+  ctx.arc(moonX, moonY, 25, 0, Math.PI*2);
   ctx.fill();
   ctx.fillStyle = 'rgba(255,255,230,0.05)';
   ctx.beginPath();
-  ctx.arc(W - 120, 80, 45, 0, Math.PI*2);
+  ctx.arc(moonX, moonY, 45, 0, Math.PI*2);
   ctx.fill();
   // Moon craters
   ctx.fillStyle = 'rgba(200,200,190,0.3)';
-  ctx.beginPath(); ctx.arc(W-128, 75, 4, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(W-112, 85, 3, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(W-122, 90, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(moonX-8, moonY-5, 4, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(moonX+8, moonY+5, 3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(moonX-2, moonY+10, 2.5, 0, Math.PI*2); ctx.fill();
 
   // Mediterranean sea (horizon)
   const seaGrad = ctx.createLinearGradient(0, GROUND_Y - 2, 0, H);
@@ -1478,8 +1497,10 @@ function draw() {
     // Banner rope
     const ropeStartX = ax - dir * 16;
     const ropeStartY = ay + 1;
-    const bannerX = ax - dir * 55;
+    const bannerOff = Math.round(55 * scaleX);
+    const bannerX = ax - dir * bannerOff;
     const bannerY = ay + 8 + Math.sin(airplane.wobble * 1.3) * 2;
+    const bannerPull = Math.round(80 * scaleX);
 
     ctx.strokeStyle = 'rgba(150,150,150,0.6)';
     ctx.lineWidth = 0.8;
@@ -1488,13 +1509,13 @@ function draw() {
     ctx.quadraticCurveTo(
       (ropeStartX + bannerX) / 2,
       Math.max(ropeStartY, bannerY) + 5,
-      bannerX + dir * 80, bannerY
+      bannerX + dir * bannerPull, bannerY
     );
     ctx.stroke();
 
     // Banner
-    const bw = 160, bh = 22;
-    const bx2 = bannerX - (dir > 0 ? 0 : bw) + dir * 80;
+    const bw = Math.round(160 * scaleX), bh = 22;
+    const bx2 = bannerX - (dir > 0 ? 0 : bw) + dir * bannerPull;
     const by2 = bannerY - bh/2;
     // Banner wave
     ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
@@ -1518,7 +1539,7 @@ function draw() {
 
     // Banner text
     ctx.fillStyle = '#cc0033';
-    ctx.font = 'bold 13px Arial';
+    ctx.font = `bold ${Math.round(13 * scaleX)}px Arial`;
     ctx.textAlign = 'center';
     ctx.fillText('אמילי קנול מלכה', bx2 + bw/2, by2 + bh/2 + 5);
     // Small crown
@@ -1754,31 +1775,34 @@ function drawMenu() {
   ctx.fillStyle = 'rgba(0,5,15,0.8)';
   ctx.fillRect(0,0,W,H);
 
-  const titleY = 155 + Math.sin(frame*0.025)*5;
+  // Center menu content vertically
+  const menuCenterY = H * 0.32;
+  const titleY = menuCenterY - 60 + Math.sin(frame*0.025)*5;
+  const fs = isMobile ? 0.85 : 1; // font scale for mobile
 
   // Title glow
   ctx.shadowColor = '#00cc66'; ctx.shadowBlur = 30;
   ctx.fillStyle = '#00dd66';
-  ctx.font = 'bold 56px Arial';
+  ctx.font = `bold ${Math.round(56*fs)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText('כיפת ברזל', W/2, titleY);
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = '#6aacee';
-  ctx.font = '22px Arial';
-  ctx.fillText('הגנה על תל אביב', W/2, titleY + 38);
+  ctx.font = `${Math.round(22*fs)}px Arial`;
+  ctx.fillText('הגנה על תל אביב', W/2, titleY + 38*fs);
 
   // Divider
   ctx.strokeStyle = 'rgba(100,200,255,0.2)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(W/2 - 120, titleY + 55);
-  ctx.lineTo(W/2 + 120, titleY + 55);
+  ctx.moveTo(W/2 - 100, titleY + 55*fs);
+  ctx.lineTo(W/2 + 100, titleY + 55*fs);
   ctx.stroke();
 
   ctx.fillStyle = '#bbb';
-  ctx.font = '15px Arial';
-  const iy = 270;
+  ctx.font = `${Math.round(14*fs)}px Arial`;
+  const iy = titleY + 80*fs;
   ctx.fillText(isMobile ? 'גע במסך כדי לכוון ולשגר מיירט' : 'כוון עם העכבר ולחץ כדי לשגר טיל מיירט', W/2, iy);
   ctx.fillText('בנה קומבו עם יירוטים ברצף להכפלת ניקוד', W/2, iy+26);
   ctx.fillText('כל 3 גלים מגיע טיל בוס - היכון!', W/2, iy+52);
@@ -1787,7 +1811,7 @@ function drawMenu() {
 
   if (highScore > 0) {
     ctx.fillStyle = '#ffdd00';
-    ctx.font = '15px Arial';
+    ctx.font = `${Math.round(15*fs)}px Arial`;
     ctx.fillText(`שיא: ${highScore}`, W/2, iy+112);
   }
 
@@ -1814,31 +1838,34 @@ function drawGameOver() {
   ctx.fillStyle = 'rgba(0,0,10,0.88)';
   ctx.fillRect(0,0,W,H);
 
+  // Center game over vertically
+  const goY = H * 0.25;
+
   ctx.fillStyle = '#ff4444';
   ctx.font = 'bold 46px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText('המשחק נגמר!', W/2, 170);
+  ctx.fillText('המשחק נגמר!', W/2, goY);
 
   ctx.fillStyle = '#fff';
   ctx.font = '30px Arial';
-  ctx.fillText(`${score}`, W/2, 225);
+  ctx.fillText(`${score}`, W/2, goY + 55);
   ctx.fillStyle = 'rgba(150,180,220,0.5)';
   ctx.font = '13px Arial';
-  ctx.fillText('FINAL SCORE', W/2, 245);
+  ctx.fillText('FINAL SCORE', W/2, goY + 75);
 
   if (score >= highScore && score > 0) {
     ctx.fillStyle = '#ffdd00';
     ctx.font = 'bold 18px Arial';
-    ctx.fillText('שיא חדש!', W/2, 275);
+    ctx.fillText('שיא חדש!', W/2, goY + 105);
   } else {
     ctx.fillStyle = '#888';
     ctx.font = '14px Arial';
-    ctx.fillText(`שיא: ${highScore}`, W/2, 275);
+    ctx.fillText(`שיא: ${highScore}`, W/2, goY + 105);
   }
 
   ctx.fillStyle = '#88bbff';
   ctx.font = '16px Arial';
-  ctx.fillText(`גל: ${wave}  |  קומבו מקסימלי: ${maxCombo}`, W/2, 310);
+  ctx.fillText(`גל: ${wave}  |  קומבו מקסימלי: ${maxCombo}`, W/2, goY + 140);
 
   let rating, rc;
   if (score >= 200) { rating = 'אלוף כיפת ברזל!'; rc = '#ffdd00'; }
@@ -1849,9 +1876,9 @@ function drawGameOver() {
   else { rating = 'נסה שוב...'; rc = '#888'; }
   ctx.fillStyle = rc;
   ctx.font = 'bold 22px Arial';
-  ctx.fillText(rating, W/2, 355);
+  ctx.fillText(rating, W/2, goY + 185);
 
-  const btnY = 390;
+  const btnY = goY + 215;
   const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY+48);
   btnGrad.addColorStop(0, '#00bb55');
   btnGrad.addColorStop(1, '#008833');
@@ -1872,9 +1899,15 @@ function gameLoop() {
 function resize() {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const scale = Math.min(vw / W, vh / H);
-  canvas.style.width = (W * scale) + 'px';
-  canvas.style.height = (H * scale) + 'px';
+  if (isMobileDevice) {
+    // Fill the entire viewport on mobile
+    canvas.style.width = vw + 'px';
+    canvas.style.height = vh + 'px';
+  } else {
+    const scale = Math.min(vw / W, vh / H);
+    canvas.style.width = (W * scale) + 'px';
+    canvas.style.height = (H * scale) + 'px';
+  }
   // Scroll to top on mobile to hide address bar
   window.scrollTo(0, 1);
 }
