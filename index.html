@@ -124,6 +124,21 @@ setLang(currentLang);
 const FIREBASE_URL = 'https://iron-dome-game-c9bba-default-rtdb.firebaseio.com';
 let leaderboardData = [];
 let leaderboardLoading = false;
+let playerCountry = '';
+
+// Detect country by IP for flag emoji
+(async () => {
+  try {
+    const res = await fetch('https://api.country.is/');
+    const data = await res.json();
+    if (data && data.country) playerCountry = data.country;
+  } catch (e) {}
+})();
+
+function countryToFlag(code) {
+  if (!code || code.length !== 2) return '';
+  return String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
 
 async function fetchLeaderboard() {
   leaderboardLoading = true;
@@ -145,7 +160,7 @@ async function submitScore(name, score, wave) {
     await fetch(`${FIREBASE_URL}/leaderboard.json`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.toUpperCase().slice(0, 6), score, wave, date: Date.now() })
+      body: JSON.stringify({ name: name.toUpperCase().slice(0, 6), score, wave, country: playerCountry, date: Date.now() })
     });
     await fetchLeaderboard();
   } catch (e) {}
@@ -2043,7 +2058,8 @@ function drawLeaderboardTable(baseY) {
     ctx.font = isTop ? 'bold 12px Arial' : '12px Arial';
     ctx.textAlign = 'left';
     ctx.fillText(`${i+1}.`, lx, ey);
-    ctx.fillText(entry.name || '???', lx + 24, ey);
+    const flag = countryToFlag(entry.country);
+    ctx.fillText(`${flag} ${entry.name || '???'}`, lx + 24, ey);
     ctx.textAlign = 'right';
     ctx.fillText(`${entry.score}`, lx + colW - 50, ey);
     ctx.fillStyle = 'rgba(130,160,200,0.4)';
