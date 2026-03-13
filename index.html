@@ -63,7 +63,8 @@ const TEXTS = {
     batteryLabel: 'כיפת ברזל',
     leaderboard: 'טבלת שיאים', enterName: 'הכנס שם (עד 6 תווים)', submit: 'שלח',
     noAmmo: 'אין מיירטים!', outOfAmmo: 'נגמרו המיירטים',
-    paused: 'השהייה', resume: 'המשך משחק'
+    paused: 'השהייה', resume: 'המשך משחק',
+    cityDefend: 'מגנים על', victory: 'ניצחון מוחלט!', victoryDesc: 'הגנת על כל ערי ישראל!'
   },
   en: {
     title: 'IRON DOME', subtitle: 'Defend Israel',
@@ -86,7 +87,8 @@ const TEXTS = {
     batteryLabel: 'IRON DOME',
     leaderboard: 'LEADERBOARD', enterName: 'Enter name (max 6 chars)', submit: 'Submit',
     noAmmo: 'No ammo!', outOfAmmo: 'Out of interceptors',
-    paused: 'Paused', resume: 'Resume'
+    paused: 'Paused', resume: 'Resume',
+    cityDefend: 'Defending', victory: 'Total Victory!', victoryDesc: 'You defended all cities of Israel!'
   },
   de: {
     title: 'IRON DOME', subtitle: 'Israel verteidigen',
@@ -109,7 +111,8 @@ const TEXTS = {
     batteryLabel: 'IRON DOME',
     leaderboard: 'BESTENLISTE', enterName: 'Name eingeben (max 6)', submit: 'Senden',
     noAmmo: 'Keine Munition!', outOfAmmo: 'Abfangjäger leer',
-    paused: 'Pause', resume: 'Weiter'
+    paused: 'Pause', resume: 'Weiter',
+    cityDefend: 'Verteidigung von', victory: 'Totaler Sieg!', victoryDesc: 'Du hast alle Städte Israels verteidigt!'
   }
 };
 let currentLang = localStorage.getItem('ironDomeLang') || 'he';
@@ -122,6 +125,194 @@ function setLang(lang) {
   document.documentElement.dir = isRTL() ? 'rtl' : 'ltr';
 }
 setLang(currentLang);
+
+// ==================== CITIES SYSTEM ====================
+const CITIES = [
+  {
+    id: 'nahariya',
+    name: { he: '\u05E0\u05D4\u05E8\u05D9\u05D4', en: 'Nahariya', de: 'Naharija' },
+    waves: [1, 2, 3],
+    bgHeightRange: [20, 50],
+    buildings: {
+      mid: [
+        { x: 30, w: 40, h: 65, color: [55, 52, 48] },
+        { x: 90, w: 35, h: 80, color: [50, 48, 45] },
+        { x: 140, w: 50, h: 55, color: [58, 55, 50] },
+        { x: 210, w: 30, h: 95, color: [52, 50, 46] },
+        { x: 260, w: 45, h: 60, color: [55, 52, 48] },
+        { x: 330, w: 35, h: 75, color: [48, 46, 42] },
+        { x: 400, w: 55, h: 50, color: [56, 53, 49] },
+        { x: 480, w: 30, h: 85, color: [50, 48, 44] },
+        { x: 530, w: 45, h: 55, color: [54, 51, 47] },
+        { x: 620, w: 40, h: 70, color: [52, 50, 46] },
+        { x: 680, w: 50, h: 50, color: [57, 54, 50] },
+        { x: 750, w: 35, h: 90, color: [50, 48, 44] },
+        { x: 820, w: 45, h: 60, color: [55, 52, 48] },
+        { x: 880, w: 30, h: 75, color: [48, 46, 42] },
+      ],
+      landmarks: [
+        // Lighthouse on the right
+        { x: 970, w: 22, h: 160, color: [220, 220, 210], shape: 'lighthouse' },
+        // Beach hotels
+        { x: 560, w: 55, h: 100, color: [60, 57, 52] },
+        { x: 380, w: 48, h: 90, color: [58, 55, 50] },
+      ],
+      foreground: { color: [55, 52, 48], maxH: 25 }
+    }
+  },
+  {
+    id: 'beersheva',
+    name: { he: '\u05D1\u05D0\u05E8 \u05E9\u05D1\u05E2', en: 'Beer Sheva', de: 'Beer Scheva' },
+    waves: [4, 5, 6],
+    bgHeightRange: [20, 55],
+    buildings: {
+      mid: [
+        { x: 30, w: 35, h: 100, color: [60, 55, 45] },
+        { x: 80, w: 50, h: 75, color: [55, 50, 42] },
+        { x: 150, w: 28, h: 130, color: [58, 53, 44], antenna: true },
+        { x: 200, w: 60, h: 85, color: [52, 48, 40] },
+        { x: 500, w: 40, h: 110, color: [56, 51, 43] },
+        { x: 560, w: 35, h: 80, color: [60, 55, 45] },
+        { x: 750, w: 30, h: 120, color: [54, 50, 42], antenna: true },
+        { x: 800, w: 45, h: 90, color: [58, 53, 44] },
+        { x: 860, w: 35, h: 70, color: [52, 48, 40] },
+        { x: 920, w: 50, h: 95, color: [56, 51, 43] },
+        { x: 990, w: 28, h: 105, color: [60, 55, 45] },
+        { x: 1040, w: 40, h: 80, color: [54, 50, 42] },
+      ],
+      landmarks: [
+        // BGU iconic building - wide modern
+        { x: 350, w: 120, h: 180, color: [65, 60, 48], shape: 'rect' },
+        // BGU tower behind
+        { x: 310, w: 30, h: 200, color: [58, 53, 44], shape: 'spire' },
+        // IDF base silhouette (flat wide)
+        { x: 620, w: 110, h: 50, color: [45, 42, 36] },
+        // Desert residential towers
+        { x: 700, w: 35, h: 155, color: [60, 55, 45], antenna: true },
+        { x: 270, w: 28, h: 140, color: [55, 50, 42] },
+      ],
+      foreground: { color: [60, 55, 45], maxH: 30 }
+    }
+  },
+  {
+    id: 'haifa',
+    name: { he: '\u05D7\u05D9\u05E4\u05D4', en: 'Haifa', de: 'Haifa' },
+    waves: [7, 8, 9],
+    bgHeightRange: [30, 70],
+    buildings: {
+      mid: [
+        { x: 20, w: 35, h: 130, color: [40, 50, 65] },
+        { x: 65, w: 45, h: 100, color: [45, 55, 70], antenna: true },
+        { x: 120, w: 30, h: 160, color: [42, 52, 67] },
+        { x: 170, w: 50, h: 90, color: [38, 48, 63] },
+        { x: 500, w: 35, h: 140, color: [44, 54, 69] },
+        { x: 545, w: 40, h: 110, color: [40, 50, 65] },
+        { x: 700, w: 28, h: 150, color: [42, 52, 67], antenna: true },
+        { x: 740, w: 50, h: 95, color: [38, 48, 63] },
+        { x: 810, w: 35, h: 120, color: [44, 54, 69] },
+        { x: 860, w: 40, h: 85, color: [40, 50, 65] },
+        { x: 920, w: 30, h: 135, color: [42, 52, 67] },
+        { x: 970, w: 45, h: 100, color: [38, 48, 63] },
+        { x: 1030, w: 35, h: 115, color: [44, 54, 69], antenna: true },
+      ],
+      landmarks: [
+        // Sail Tower (asymmetric sail, very tall)
+        { x: 380, w: 55, h: 290, color: [50, 65, 90], shape: 'sail' },
+        // Port cranes
+        { x: 240, w: 30, h: 220, color: [70, 75, 80], shape: 'crane' },
+        { x: 310, w: 25, h: 200, color: [65, 70, 75], shape: 'crane' },
+        // Bahai Gardens terraces
+        { x: 600, w: 90, h: 180, color: [40, 80, 50], shape: 'stepped' },
+        // University tower
+        { x: 460, w: 32, h: 200, color: [48, 58, 78], shape: 'spire' },
+      ],
+      foreground: { color: [40, 50, 65], maxH: 35 }
+    }
+  },
+  {
+    id: 'jerusalem',
+    name: { he: '\u05D9\u05E8\u05D5\u05E9\u05DC\u05D9\u05DD', en: 'Jerusalem', de: 'Jerusalem' },
+    waves: [10, 11, 12],
+    bgHeightRange: [25, 65],
+    buildings: {
+      mid: [
+        { x: 20, w: 30, h: 120, color: [65, 60, 50] },
+        { x: 60, w: 40, h: 90, color: [60, 55, 48], antenna: true },
+        { x: 110, w: 35, h: 150, color: [62, 57, 49] },
+        { x: 160, w: 50, h: 100, color: [58, 54, 46] },
+        { x: 680, w: 30, h: 140, color: [64, 59, 50] },
+        { x: 720, w: 45, h: 110, color: [60, 55, 48] },
+        { x: 780, w: 28, h: 160, color: [62, 57, 49], antenna: true },
+        { x: 820, w: 40, h: 95, color: [58, 54, 46] },
+        { x: 880, w: 35, h: 130, color: [64, 59, 50] },
+        { x: 930, w: 50, h: 85, color: [60, 55, 48] },
+        { x: 990, w: 28, h: 145, color: [62, 57, 49] },
+        { x: 1040, w: 35, h: 105, color: [58, 54, 46], antenna: true },
+      ],
+      landmarks: [
+        // Old city walls (wide, central-left)
+        { x: 280, w: 200, h: 70, color: [75, 68, 55], shape: 'wall' },
+        // Tower of David
+        { x: 250, w: 25, h: 170, color: [70, 64, 52], shape: 'rect', antenna: true },
+        // Dome (architectural shape, no religious symbols)
+        { x: 370, w: 70, h: 120, color: [185, 165, 80], shape: 'dome' },
+        // Knesset (wide classical)
+        { x: 550, w: 100, h: 80, color: [72, 66, 56] },
+        // Modern Jerusalem towers behind old city
+        { x: 320, w: 30, h: 210, color: [68, 62, 52], shape: 'spire' },
+        { x: 450, w: 28, h: 190, color: [65, 60, 50] },
+        // Chords Bridge suggestion (thin tall with cable)
+        { x: 630, w: 8, h: 230, color: [200, 200, 210], antenna: true },
+      ],
+      foreground: { color: [65, 60, 50], maxH: 30 }
+    }
+  },
+  {
+    id: 'telaviv',
+    name: { he: '\u05EA\u05DC \u05D0\u05D1\u05D9\u05D1', en: 'Tel Aviv', de: 'Tel Aviv' },
+    waves: [13, 14, 15],
+    bgHeightRange: [30, 60],
+    buildings: {
+      mid: [
+        { x: 20, w: 28, h: 120, color: [35, 42, 62] },
+        { x: 55, w: 35, h: 90, color: [38, 45, 65] },
+        { x: 100, w: 22, h: 150, color: [42, 48, 68], antenna: true },
+        { x: 130, w: 40, h: 100, color: [36, 43, 63] },
+        { x: 180, w: 25, h: 170, color: [40, 47, 67], antenna: true },
+        { x: 215, w: 50, h: 80, color: [34, 40, 60] },
+        { x: 700, w: 30, h: 140, color: [38, 44, 64], antenna: true },
+        { x: 740, w: 45, h: 95, color: [35, 42, 62] },
+        { x: 800, w: 25, h: 160, color: [40, 46, 66] },
+        { x: 835, w: 35, h: 110, color: [36, 43, 63] },
+        { x: 880, w: 28, h: 130, color: [38, 45, 65], antenna: true },
+        { x: 920, w: 50, h: 85, color: [34, 40, 60] },
+        { x: 980, w: 30, h: 145, color: [40, 47, 67] },
+        { x: 1020, w: 40, h: 100, color: [36, 42, 62] },
+        { x: 1065, w: 25, h: 120, color: [38, 44, 64], antenna: true },
+      ],
+      landmarks: [
+        // Azrieli Center
+        { x: 370, w: 48, h: 260, color: [50, 60, 85], shape: 'rect' },
+        { x: 425, w: 44, h: 290, color: [55, 65, 90], shape: 'round' },
+        { x: 478, w: 46, h: 250, color: [48, 58, 82], shape: 'triangle' },
+        // Shalom Tower area
+        { x: 280, w: 38, h: 200, color: [45, 52, 72], antenna: true },
+        { x: 325, w: 30, h: 150, color: [40, 48, 68] },
+        // Modern towers (Sarona area)
+        { x: 545, w: 32, h: 220, color: [52, 62, 85], shape: 'spire' },
+        { x: 585, w: 40, h: 180, color: [48, 56, 78] },
+        { x: 635, w: 28, h: 240, color: [55, 65, 88], antenna: true },
+        { x: 670, w: 35, h: 160, color: [44, 52, 74] },
+      ],
+      foreground: { color: [55, 52, 48], maxH: 30 }
+    }
+  }
+];
+
+function getCurrentCity(wave) {
+  const cityIdx = Math.min(Math.floor((wave - 1) / 3), CITIES.length - 1);
+  return CITIES[cityIdx];
+}
 
 // ==================== FIREBASE LEADERBOARD ====================
 const FIREBASE_URL = 'https://iron-dome-game-c9bba-default-rtdb.asia-southeast1.firebasedatabase.app';
@@ -570,6 +761,215 @@ function drawBuilding(x, w, h, opts = {}) {
     cctx.lineTo(x + 2, y + 30);
     cctx.closePath();
     cctx.fill();
+  } else if (opts.shape === 'dome') {
+    // Dome silhouette - half circle on rectangular base
+    const baseH = h * 0.35;
+    const domeH = h - baseH;
+    cctx.fillRect(x, GROUND_Y - baseH, w, baseH);
+    cctx.beginPath();
+    cctx.arc(x + w/2, GROUND_Y - baseH, w/2, Math.PI, 0);
+    cctx.closePath();
+    cctx.fill();
+    // Dome highlight
+    cctx.fillStyle = `rgba(${base[0]+30},${base[1]+30},${base[2]+20}, 0.3)`;
+    cctx.beginPath();
+    cctx.arc(x + w/2 - w*0.1, GROUND_Y - baseH - w*0.08, w*0.3, Math.PI, 0);
+    cctx.closePath();
+    cctx.fill();
+  } else if (opts.shape === 'wall') {
+    // Old city wall with crenellations (merlons)
+    const wallH = h * 0.7;
+    const crenH = h * 0.3;
+    const crenW = w / 12;
+    cctx.fillRect(x, GROUND_Y - wallH, w, wallH);
+    // Crenellations
+    for (let cx = x; cx < x + w - crenW; cx += crenW * 2) {
+      cctx.fillRect(cx, GROUND_Y - wallH - crenH, crenW, crenH);
+    }
+    // Stone texture lines
+    cctx.strokeStyle = `rgba(${base[0]-15},${base[1]-15},${base[2]-15}, 0.4)`;
+    cctx.lineWidth = 0.5;
+    for (let ly = GROUND_Y - wallH + 8; ly < GROUND_Y; ly += 10) {
+      cctx.beginPath();
+      cctx.moveTo(x, ly);
+      cctx.lineTo(x + w, ly);
+      cctx.stroke();
+      // Vertical stone joints (offset every other row)
+      const offset = ((ly - (GROUND_Y - wallH)) / 10) % 2 === 0 ? 0 : 8;
+      for (let jx = x + offset; jx < x + w; jx += 16) {
+        cctx.beginPath();
+        cctx.moveTo(jx, ly);
+        cctx.lineTo(jx, ly + 10);
+        cctx.stroke();
+      }
+    }
+  } else if (opts.shape === 'lighthouse') {
+    // Lighthouse - tapered cylinder with lamp room
+    const baseW = w;
+    const topW = w * 0.5;
+    const lampH = 18;
+    const bodyH = h - lampH;
+    // Tapered body
+    cctx.beginPath();
+    cctx.moveTo(x, GROUND_Y);
+    cctx.lineTo(x + (baseW - topW)/2, y + lampH);
+    cctx.lineTo(x + (baseW + topW)/2, y + lampH);
+    cctx.lineTo(x + baseW, GROUND_Y);
+    cctx.closePath();
+    cctx.fill();
+    // Stripes (red/white)
+    const stripeCount = 5;
+    const stripeH = bodyH / stripeCount;
+    for (let si = 0; si < stripeCount; si++) {
+      if (si % 2 === 0) {
+        const sTop = y + lampH + si * stripeH;
+        const sBot = sTop + stripeH;
+        const tRatio1 = (sTop - (y + lampH)) / bodyH;
+        const tRatio2 = (sBot - (y + lampH)) / bodyH;
+        const lx1 = x + (baseW - topW)/2 * (1 - tRatio1) + 0 * tRatio1;
+        const rx1 = x + (baseW + topW)/2 * (1 - tRatio1) + baseW * tRatio1;
+        const lx2 = x + (baseW - topW)/2 * (1 - tRatio2) + 0 * tRatio2;
+        const rx2 = x + (baseW + topW)/2 * (1 - tRatio2) + baseW * tRatio2;
+        cctx.fillStyle = 'rgba(180, 50, 50, 0.4)';
+        cctx.beginPath();
+        cctx.moveTo(lx1, sTop);
+        cctx.lineTo(rx1, sTop);
+        cctx.lineTo(rx2, sBot);
+        cctx.lineTo(lx2, sBot);
+        cctx.closePath();
+        cctx.fill();
+      }
+    }
+    // Lamp room (gallery)
+    const lampW = topW * 1.4;
+    const lampX = x + baseW/2 - lampW/2;
+    cctx.fillStyle = '#444';
+    cctx.fillRect(lampX, y + 4, lampW, lampH - 4);
+    // Lamp glass
+    cctx.fillStyle = 'rgba(255, 255, 150, 0.8)';
+    cctx.fillRect(lampX + 2, y + 6, lampW - 4, lampH - 10);
+    // Light glow
+    cctx.fillStyle = 'rgba(255, 255, 100, 0.15)';
+    cctx.beginPath();
+    cctx.arc(x + baseW/2, y + lampH/2, 30, 0, Math.PI * 2);
+    cctx.fill();
+    // Cap
+    cctx.fillStyle = '#333';
+    cctx.beginPath();
+    cctx.moveTo(lampX - 2, y + 4);
+    cctx.lineTo(x + baseW/2, y - 4);
+    cctx.lineTo(lampX + lampW + 2, y + 4);
+    cctx.closePath();
+    cctx.fill();
+    return; // Skip windows for lighthouse
+  } else if (opts.shape === 'crane') {
+    // Port crane - thin vertical mast with horizontal jib
+    const mastW = w * 0.2;
+    const mastX = x + w/2 - mastW/2;
+    // Vertical mast
+    cctx.fillStyle = `rgb(${base[0]},${base[1]},${base[2]})`;
+    cctx.fillRect(mastX, y, mastW, h);
+    // Horizontal jib (extends right)
+    const jibH = 4;
+    cctx.fillRect(x - w*0.3, y, w * 1.6, jibH);
+    // Counter-jib (short, extends left)
+    cctx.fillRect(x - w*0.8, y + 2, w * 0.5, jibH - 1);
+    // Counterweight
+    cctx.fillStyle = `rgb(${base[0]-15},${base[1]-15},${base[2]-15})`;
+    cctx.fillRect(x - w*0.8, y + jibH, w*0.2, 12);
+    // A-frame support struts
+    cctx.strokeStyle = `rgb(${base[0]+10},${base[1]+10},${base[2]+10})`;
+    cctx.lineWidth = 1.5;
+    // Left strut
+    cctx.beginPath();
+    cctx.moveTo(mastX, y + h * 0.3);
+    cctx.lineTo(x - w*0.3, y);
+    cctx.stroke();
+    // Right strut
+    cctx.beginPath();
+    cctx.moveTo(mastX + mastW, y + h * 0.3);
+    cctx.lineTo(x + w * 1.3, y);
+    cctx.stroke();
+    // Trolley cable
+    cctx.strokeStyle = 'rgba(150,150,150,0.5)';
+    cctx.lineWidth = 0.8;
+    const trolleyX = x + w * 0.8;
+    cctx.beginPath();
+    cctx.moveTo(trolleyX, y + jibH);
+    cctx.lineTo(trolleyX, y + jibH + h*0.35);
+    cctx.stroke();
+    // Hook
+    cctx.fillStyle = '#888';
+    cctx.beginPath();
+    cctx.arc(trolleyX, y + jibH + h*0.35, 3, 0, Math.PI*2);
+    cctx.fill();
+    // Warning light
+    cctx.fillStyle = 'rgba(255, 50, 50, 0.7)';
+    cctx.beginPath();
+    cctx.arc(mastX + mastW/2, y - 3, 2.5, 0, Math.PI*2);
+    cctx.fill();
+    cctx.fillStyle = 'rgba(255, 50, 50, 0.1)';
+    cctx.beginPath();
+    cctx.arc(mastX + mastW/2, y - 3, 8, 0, Math.PI*2);
+    cctx.fill();
+    return; // Skip windows for crane
+  } else if (opts.shape === 'sail') {
+    // Sail Tower Haifa - asymmetric sail shape
+    // Right edge is straight vertical, left edge curves out
+    cctx.beginPath();
+    cctx.moveTo(x + w, GROUND_Y); // bottom right
+    cctx.lineTo(x + w, y); // top right (tall straight edge)
+    // Sail curve from top to bottom-left
+    cctx.quadraticCurveTo(x + w*0.3, y + h*0.15, x, y + h*0.5);
+    cctx.lineTo(x + w*0.15, GROUND_Y); // bottom left
+    cctx.closePath();
+    cctx.fill();
+    // Glass panels (vertical lines)
+    cctx.strokeStyle = 'rgba(120, 170, 220, 0.2)';
+    cctx.lineWidth = 0.8;
+    for (let px = x + w*0.2; px < x + w; px += 6) {
+      cctx.beginPath();
+      const topY = y + (1 - (px - x)/w) * h * 0.4;
+      cctx.moveTo(px, Math.max(topY, y));
+      cctx.lineTo(px, GROUND_Y);
+      cctx.stroke();
+    }
+    // Highlight edge
+    cctx.strokeStyle = `rgba(${base[0]+40},${base[1]+40},${base[2]+40}, 0.4)`;
+    cctx.lineWidth = 1.5;
+    cctx.beginPath();
+    cctx.moveTo(x + w, y);
+    cctx.lineTo(x + w, GROUND_Y);
+    cctx.stroke();
+  } else if (opts.shape === 'stepped') {
+    // Stepped pyramid / terraces (Bahai Gardens)
+    const steps = 7;
+    const stepH = h / steps;
+    const maxW = w;
+    const minW = w * 0.3;
+    for (let si = 0; si < steps; si++) {
+      const ratio = si / (steps - 1);
+      const sw = maxW - (maxW - minW) * ratio;
+      const sx = x + (maxW - sw) / 2;
+      const sy = GROUND_Y - (si + 1) * stepH;
+      // Green terraces
+      const green = Math.floor(80 + ratio * 40);
+      cctx.fillStyle = `rgb(${30 + si*3}, ${green}, ${30 + si*2})`;
+      cctx.fillRect(sx, sy, sw, stepH + 1);
+      // Terrace edge highlight
+      cctx.fillStyle = `rgba(100, ${green + 40}, 80, 0.3)`;
+      cctx.fillRect(sx, sy, sw, 2);
+    }
+    // Golden dome at top
+    const topStepW = minW;
+    const topX = x + (maxW - topStepW)/2;
+    const domeR = topStepW * 0.4;
+    cctx.fillStyle = 'rgba(200, 170, 50, 0.8)';
+    cctx.beginPath();
+    cctx.arc(topX + topStepW/2, GROUND_Y - h - domeR*0.3, domeR, Math.PI, 0);
+    cctx.closePath();
+    cctx.fill();
+    return; // Skip windows for stepped
   } else {
     cctx.fillRect(x, y, w, h);
     // Flat roof or antenna
@@ -640,62 +1040,36 @@ function drawBuilding(x, w, h, opts = {}) {
   }
 }
 
-function generateCityCanvas() {
+function generateCityCanvas(city) {
+  if (!city) city = CITIES[0];
   cctx.clearRect(0, 0, W, H);
+
+  const sx = scaleX; // shorthand
+  const bldgs = city.buildings;
+  const bgRange = city.bgHeightRange || [30, 60];
 
   // -- Far background buildings (silhouettes) --
   cctx.fillStyle = 'rgba(25, 30, 50, 0.9)';
   for (let x = 0; x < W; x += 18 + Math.random() * 15) {
-    const bh = 30 + Math.random() * 60;
+    const bh = bgRange[0] + Math.random() * (bgRange[1] - bgRange[0]);
     cctx.fillRect(x, GROUND_Y - bh, 14 + Math.random() * 12, bh);
   }
 
   // -- Mid layer buildings (scaled to canvas width) --
-  const sx = scaleX; // shorthand
-  const midBuildings = [
-    { x: 20*sx, w: 28*sx, h: 120, color: [35, 42, 62] },
-    { x: 55*sx, w: 35*sx, h: 90, color: [38, 45, 65] },
-    { x: 100*sx, w: 22*sx, h: 150, color: [42, 48, 68], antenna: true },
-    { x: 130*sx, w: 40*sx, h: 100, color: [36, 43, 63] },
-    { x: 180*sx, w: 25*sx, h: 170, color: [40, 47, 67], antenna: true },
-    { x: 215*sx, w: 50*sx, h: 80, color: [34, 40, 60] },
-    { x: 700*sx, w: 30*sx, h: 140, color: [38, 44, 64], antenna: true },
-    { x: 740*sx, w: 45*sx, h: 95, color: [35, 42, 62] },
-    { x: 800*sx, w: 25*sx, h: 160, color: [40, 46, 66] },
-    { x: 835*sx, w: 35*sx, h: 110, color: [36, 43, 63] },
-    { x: 880*sx, w: 28*sx, h: 130, color: [38, 45, 65], antenna: true },
-    { x: 920*sx, w: 50*sx, h: 85, color: [34, 40, 60] },
-    { x: 980*sx, w: 30*sx, h: 145, color: [40, 47, 67] },
-    { x: 1020*sx, w: 40*sx, h: 100, color: [36, 42, 62] },
-    { x: 1065*sx, w: 25*sx, h: 120, color: [38, 44, 64], antenna: true },
-  ];
-  midBuildings.forEach(b => drawBuilding(b.x, b.w, b.h, b));
+  bldgs.mid.forEach(b => drawBuilding(b.x * sx, b.w * sx, b.h, b));
 
-  // -- Azrieli Center (iconic Tel Aviv landmark) --
-  // Square tower
-  drawBuilding(370*sx, 48*sx, 260, { color: [50, 60, 85], shape: 'rect' });
-  // Round tower (tallest)
-  drawBuilding(425*sx, 44*sx, 290, { color: [55, 65, 90], shape: 'round' });
-  // Triangle tower
-  drawBuilding(478*sx, 46*sx, 250, { color: [48, 58, 82], shape: 'triangle' });
+  // -- Landmark buildings --
+  bldgs.landmarks.forEach(b => drawBuilding(b.x * sx, b.w * sx, b.h, b));
 
-  // -- Shalom Tower area --
-  drawBuilding(280*sx, 38*sx, 200, { color: [45, 52, 72], antenna: true });
-  drawBuilding(325*sx, 30*sx, 150, { color: [40, 48, 68] });
-
-  // -- Modern towers (Sarona area) --
-  drawBuilding(545*sx, 32*sx, 220, { color: [52, 62, 85], shape: 'spire' });
-  drawBuilding(585*sx, 40*sx, 180, { color: [48, 56, 78] });
-  drawBuilding(635*sx, 28*sx, 240, { color: [55, 65, 88], antenna: true });
-  drawBuilding(670*sx, 35*sx, 160, { color: [44, 52, 74] });
-
-  // -- Foreground details: Bauhaus-style low buildings --
+  // -- Foreground low buildings --
+  const fg = bldgs.foreground;
   for (let x = 0; x < W; x += 22 + Math.random() * 18) {
     const bw = 18 + Math.random() * 16;
-    const bh = 20 + Math.random() * 30;
+    const bh = 15 + Math.random() * (fg.maxH || 30);
     if (Math.random() > 0.3) {
       const y = GROUND_Y - bh;
-      cctx.fillStyle = `rgb(${55 + Math.random()*15}, ${52 + Math.random()*15}, ${48 + Math.random()*15})`;
+      const fc = fg.color || [55, 52, 48];
+      cctx.fillStyle = `rgb(${fc[0] + Math.random()*15}, ${fc[1] + Math.random()*15}, ${fc[2] + Math.random()*15})`;
       cctx.fillRect(x, y, bw, bh);
       // Small windows
       for (let wy = y + 4; wy < GROUND_Y - 3; wy += 7) {
@@ -709,10 +1083,12 @@ function generateCityCanvas() {
     }
   }
 }
-generateCityCanvas();
+generateCityCanvas(CITIES[0]);
 
 // ==================== GAME STATE ====================
-let state = 'menu'; // 'menu', 'playing', 'gameover', 'nameinput'
+let state = 'menu'; // 'menu', 'playing', 'gameover', 'nameinput', 'victory'
+let currentCityIdx = 0;
+let cityIntroTimer = 0;
 let score = 0, lives = 5, wave = 0;
 let waveState = 'playing';
 let waveMissilesLeft = 0, waveTransitionTimer = 0, bossIntroTimer = 0;
@@ -957,6 +1333,11 @@ function handleClick() {
     }
     return;
   }
+  if (state === 'victory') {
+    if (isInBtn(mouseX, mouseY, playAgainBtnRect)) { showLeaderboard = false; startGame(); return; }
+    if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = !showLeaderboard; if (showLeaderboard) fetchLeaderboard(); return; }
+    return;
+  }
   if (state === 'gameover') {
     if (isInBtn(mouseX, mouseY, playAgainBtnRect)) { showLeaderboard = false; startGame(); return; }
     if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = !showLeaderboard; if (showLeaderboard) fetchLeaderboard(); return; }
@@ -1040,7 +1421,8 @@ function startGame() {
   missiles = []; interceptors = []; explosions = [];
   particles = []; floatingTexts = []; smokeTrails = [];
   boss = null; frame = 0; screenFlash = 0;
-  generateCityCanvas();
+  currentCityIdx = 0; cityIntroTimer = 0;
+  generateCityCanvas(CITIES[0]);
   playSound('game_siren');
   // Delay first wave start to let siren play
   sirenTimer = 210; // ~3.5 seconds
@@ -1050,6 +1432,40 @@ function startGame() {
 
 function startWave() {
   wave++;
+  // Victory check: after wave 15 boss defeated, we would already be at wave 16
+  if (wave > 15) {
+    // Victory! All cities defended
+    stopMusic();
+    if (score > highScore) {
+      highScore = score; localStorage.setItem('ironDomeHS2', String(highScore));
+    }
+    nameInput = '';
+    nameInputActive = false;
+    showLeaderboard = false;
+    state = 'victory';
+    playSound('hatikvah');
+    fetchLeaderboard().then(() => {
+      if (qualifiesForLeaderboard(score)) {
+        nameInputActive = true;
+        state = 'nameinput';
+      }
+    });
+    return;
+  }
+  // Check for city change
+  const newCityIdx = Math.min(Math.floor((wave - 1) / 3), CITIES.length - 1);
+  if (newCityIdx !== currentCityIdx || wave === 1) {
+    currentCityIdx = newCityIdx;
+    generateCityCanvas(CITIES[currentCityIdx]);
+    // Show city intro
+    waveState = 'city_intro';
+    cityIntroTimer = 150; // 2.5 seconds
+    return;
+  }
+  _startWaveActual();
+}
+
+function _startWaveActual() {
   const cfg = getWaveConfig(wave);
   waveMissilesLeft = cfg.missiles;
   // Arsenal: 2x total threats (missiles + boss HP if boss wave)
@@ -1180,6 +1596,13 @@ function update() {
   if (waveState === 'siren_intro') {
     sirenTimer--;
     if (sirenTimer <= 0) startWave();
+    return;
+  }
+
+  // City intro screen
+  if (waveState === 'city_intro') {
+    cityIntroTimer--;
+    if (cityIntroTimer <= 0) _startWaveActual();
     return;
   }
 
@@ -1822,6 +2245,7 @@ function draw() {
   drawWaveTransition();
   drawBossIntro();
   drawSirenIntro();
+  drawCityIntro();
 
   ctx.restore();
 
@@ -1855,6 +2279,7 @@ function draw() {
   if (state === 'menu') drawMenu();
   if (state === 'nameinput') drawNameInput();
   if (state === 'gameover') drawGameOver();
+  if (state === 'victory') drawVictory();
 }
 
 function drawSirenIntro() {
@@ -1881,6 +2306,64 @@ function drawSirenIntro() {
   ctx.fillStyle = '#ffaaaa';
   ctx.font = '16px Arial';
   ctx.fillText(t('sirenPrepare'), W/2, H/2 + 18);
+
+  ctx.globalAlpha = 1;
+}
+
+function drawCityIntro() {
+  if (waveState !== 'city_intro') return;
+  const progress = 1 - cityIntroTimer / 150;
+  const city = CITIES[currentCityIdx];
+  const cityName = city.name[currentLang] || city.name.en;
+
+  // Dark overlay
+  const fadeIn = Math.min(1, progress * 5);
+  const fadeOut = cityIntroTimer < 20 ? cityIntroTimer / 20 : 1;
+  const alpha = fadeIn * fadeOut;
+
+  ctx.fillStyle = `rgba(0, 5, 20, ${0.7 * alpha})`;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.globalAlpha = alpha;
+  ctx.textAlign = 'center';
+
+  // City number indicator
+  ctx.fillStyle = 'rgba(100, 180, 255, 0.6)';
+  ctx.font = `bold ${fz(14)}px Arial`;
+  ctx.fillText(`${currentCityIdx + 1} / ${CITIES.length}`, W/2, H/2 - fz(55));
+
+  // "Defending" subtitle
+  ctx.fillStyle = '#88bbff';
+  ctx.font = `${fz(16)}px Arial`;
+  ctx.fillText(t('cityDefend'), W/2, H/2 - fz(30));
+
+  // City name - big dramatic text with glow
+  const nameScale = 1 + Math.sin(progress * Math.PI) * 0.05;
+  ctx.save();
+  ctx.translate(W/2, H/2 + fz(5));
+  ctx.scale(nameScale, nameScale);
+  ctx.shadowColor = '#00aaff';
+  ctx.shadowBlur = 25;
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${fz(38)}px Arial`;
+  ctx.fillText(cityName, 0, 0);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // Wave range info
+  ctx.fillStyle = 'rgba(150, 200, 255, 0.5)';
+  ctx.font = `${fz(13)}px Arial`;
+  const waveRange = `${t('wave')} ${city.waves[0]} - ${city.waves[city.waves.length - 1]}`;
+  ctx.fillText(waveRange, W/2, H/2 + fz(35));
+
+  // Progress bar showing city progression
+  const barW = fz(200), barH = fz(6);
+  const barX = W/2 - barW/2, barY = H/2 + fz(55);
+  ctx.fillStyle = 'rgba(40, 60, 100, 0.5)';
+  ctx.fillRect(barX, barY, barW, barH);
+  const cityProgress = (currentCityIdx + 1) / CITIES.length;
+  ctx.fillStyle = '#00aaff';
+  ctx.fillRect(barX, barY, barW * cityProgress, barH);
 
   ctx.globalAlpha = 1;
 }
@@ -1959,7 +2442,8 @@ function drawHUD() {
   ctx.fillStyle = '#6aacee';
   ctx.font = `bold ${fz(13)}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText(`${t('wave')} ${wave}`, W/2, hudH*0.42);
+  const cityName = CITIES[currentCityIdx] ? (CITIES[currentCityIdx].name[currentLang] || CITIES[currentCityIdx].name.en) : '';
+  ctx.fillText(`${t('wave')} ${wave} - ${cityName}`, W/2, hudH*0.42);
   const missilesInPlay = waveMissilesLeft + missiles.length;
   if ((waveState === 'playing' || waveState === 'boss') && missilesInPlay > 0) {
     ctx.fillStyle = 'rgba(150,180,220,0.5)';
@@ -2070,19 +2554,31 @@ function drawWaveTransition() {
   const p = 1 - waveTransitionTimer/300;
   const alpha = p < 0.15 ? p/0.15 : p > 0.85 ? (1-p)/0.15 : 1;
   ctx.fillStyle = `rgba(0,15,30,${alpha*0.7})`;
-  ctx.fillRect(0, H/2-55, W, 110);
+  ctx.fillRect(0, H/2-65, W, 130);
   ctx.globalAlpha = alpha;
   ctx.fillStyle = '#4ac8ff';
   ctx.font = 'bold 32px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText(`${t('wave')} ${wave} ${t('waveComplete')}`, W/2, H/2-8);
+  ctx.fillText(`${t('wave')} ${wave} ${t('waveComplete')}`, W/2, H/2-18);
   ctx.fillStyle = '#8ad8ff';
   ctx.font = '18px Arial';
-  ctx.fillText(`${t('nextWave')} ${wave+1}...`, W/2, H/2+22);
-  if (getWaveConfig(wave+1).hasBoss) {
-    ctx.fillStyle = '#ff6666';
-    ctx.font = 'bold 15px Arial';
-    ctx.fillText(t('bossWarn'), W/2, H/2+45);
+  const nextWave = wave + 1;
+  if (nextWave <= 15) {
+    ctx.fillText(`${t('nextWave')} ${nextWave}...`, W/2, H/2+12);
+    // Show next city if changing
+    const nextCityIdx = Math.min(Math.floor((nextWave - 1) / 3), CITIES.length - 1);
+    if (nextCityIdx !== currentCityIdx) {
+      const nextCity = CITIES[nextCityIdx];
+      const nextCityName = nextCity.name[currentLang] || nextCity.name.en;
+      ctx.fillStyle = '#ffdd00';
+      ctx.font = 'bold 16px Arial';
+      ctx.fillText(`\u279C ${nextCityName}`, W/2, H/2+35);
+    }
+    if (getWaveConfig(nextWave).hasBoss) {
+      ctx.fillStyle = '#ff6666';
+      ctx.font = 'bold 15px Arial';
+      ctx.fillText(t('bossWarn'), W/2, H/2+55);
+    }
   }
   ctx.globalAlpha = 1;
 }
@@ -2352,6 +2848,114 @@ function drawNameInput() {
     ctx.textAlign = 'center';
     ctx.fillText(t('submit'), W/2, subBtnY + 25);
   }
+}
+
+function drawVictory() {
+  ctx.fillStyle = 'rgba(0, 5, 15, 0.88)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Language toggle
+  drawLangToggle(12);
+
+  // If leaderboard is open
+  if (showLeaderboard) {
+    drawLeaderboardTable(H * 0.12);
+    const btnW = fz(170), btnH = fz(40);
+    const btnY2 = H - fz(80);
+    playAgainBtnRect = { x: W/2 - btnW/2, y: btnY2, w: btnW, h: btnH };
+    const btnGrad2 = ctx.createLinearGradient(0, btnY2, 0, btnY2 + btnH);
+    btnGrad2.addColorStop(0, '#00bb55');
+    btnGrad2.addColorStop(1, '#008833');
+    ctx.fillStyle = btnGrad2;
+    ctx.beginPath(); ctx.roundRect(playAgainBtnRect.x, btnY2, btnW, btnH, 10); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${fz(17)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText(t('playAgain'), W/2, btnY2 + btnH * 0.65);
+    lbBtnRect = { x: 0, y: H - fz(35), w: W, h: fz(35) };
+    ctx.fillStyle = 'rgba(150,180,220,0.4)';
+    ctx.font = `${fz(12)}px Arial`;
+    ctx.fillText(currentLang === 'he' ? '\u05DC\u05D7\u05E5 \u05DC\u05D7\u05D6\u05E8\u05D4' : 'Tap to go back', W/2, H - fz(10));
+    return;
+  }
+
+  const vY = H * 0.1;
+
+  // Victory title with golden glow
+  ctx.save();
+  ctx.shadowColor = '#ffcc00';
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = '#ffdd00';
+  ctx.font = `bold ${fz(36)}px Arial`;
+  ctx.textAlign = 'center';
+  const pulse = 1 + Math.sin(frame * 0.04) * 0.03;
+  ctx.translate(W/2, vY);
+  ctx.scale(pulse, pulse);
+  ctx.fillText(t('victory'), 0, 0);
+  ctx.restore();
+  ctx.shadowBlur = 0;
+
+  // Description
+  ctx.fillStyle = '#88ccff';
+  ctx.font = `${fz(15)}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.fillText(t('victoryDesc'), W/2, vY + fz(30));
+
+  // Score
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${fz(30)}px Arial`;
+  ctx.fillText(`${score}`, W/2, vY + fz(70));
+  ctx.fillStyle = 'rgba(150,180,220,0.5)';
+  ctx.font = `${fz(12)}px Arial`;
+  ctx.fillText(t('finalScore'), W/2, vY + fz(88));
+
+  // Stats
+  ctx.fillStyle = '#88bbff';
+  ctx.font = `${fz(13)}px Arial`;
+  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, vY + fz(110));
+
+  // Cities defended list
+  ctx.fillStyle = 'rgba(100, 200, 255, 0.6)';
+  ctx.font = `${fz(11)}px Arial`;
+  const cityNames = CITIES.map(c => c.name[currentLang] || c.name.en).join('  \u2022  ');
+  ctx.fillText(cityNames, W/2, vY + fz(132));
+
+  // Rating
+  const ratings = t('rating');
+  ctx.fillStyle = '#ffdd00';
+  ctx.font = `bold ${fz(18)}px Arial`;
+  ctx.fillText(ratings[5], W/2, vY + fz(160));
+
+  // Buttons side by side
+  const gap = fz(10);
+  const playW = fz(160), playH = fz(42);
+  const lbW2 = fz(55), lbH2 = fz(42);
+  const totalBtnW = playW + gap + lbW2;
+  const btnY = vY + fz(178);
+  const startX = W/2 - totalBtnW / 2;
+
+  // Play again
+  playAgainBtnRect = { x: startX, y: btnY, w: playW, h: playH };
+  const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY + playH);
+  btnGrad.addColorStop(0, '#00bb55');
+  btnGrad.addColorStop(1, '#008833');
+  ctx.fillStyle = btnGrad;
+  ctx.beginPath(); ctx.roundRect(startX, btnY, playW, playH, 10); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${fz(17)}px Arial`;
+  ctx.fillText(t('playAgain'), startX + playW / 2, btnY + playH * 0.63);
+
+  // Leaderboard button
+  const lbX = startX + playW + gap;
+  lbBtnRect = { x: lbX, y: btnY, w: lbW2, h: lbH2 };
+  ctx.fillStyle = 'rgba(30,50,80,0.7)';
+  ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 10); ctx.fill();
+  ctx.strokeStyle = 'rgba(100,150,220,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 10); ctx.stroke();
+  ctx.fillStyle = '#6aacee';
+  ctx.font = `bold ${fz(18)}px Arial`;
+  ctx.fillText('\u{1F3C6}', lbX + lbW2 / 2, btnY + lbH2 * 0.63);
 }
 
 function drawGameOver() {
