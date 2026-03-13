@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
-<title>כיפת ברזל - הגנה על תל אביב</title>
+<title>כיפת ברזל - הגנה על ישראל</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
@@ -43,7 +43,7 @@ const isMobileDevice = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgen
 // ==================== i18n LANGUAGE SYSTEM ====================
 const TEXTS = {
   he: {
-    title: 'כיפת ברזל', subtitle: 'הגנה על תל אביב',
+    title: 'כיפת ברזל', subtitle: 'הגנה על ישראל',
     start: 'התחל משחק', playAgain: 'שחק שוב',
     instrAim: 'גע במסך כדי לכוון ולשגר מיירט',
     instrAimDesktop: 'כוון עם העכבר ולחץ כדי לשגר טיל מיירט',
@@ -66,7 +66,7 @@ const TEXTS = {
     paused: 'השהייה', resume: 'המשך משחק'
   },
   en: {
-    title: 'IRON DOME', subtitle: 'Defend Tel Aviv',
+    title: 'IRON DOME', subtitle: 'Defend Israel',
     start: 'Start Game', playAgain: 'Play Again',
     instrAim: 'Tap the screen to aim and fire interceptor',
     instrAimDesktop: 'Aim with mouse and click to fire interceptor',
@@ -89,7 +89,7 @@ const TEXTS = {
     paused: 'Paused', resume: 'Resume'
   },
   de: {
-    title: 'IRON DOME', subtitle: 'Tel Aviv verteidigen',
+    title: 'IRON DOME', subtitle: 'Israel verteidigen',
     start: 'Spiel starten', playAgain: 'Nochmal spielen',
     instrAim: 'Bildschirm berühren um zu zielen und abzufeuern',
     instrAimDesktop: 'Mit Maus zielen und klicken zum Abfeuern',
@@ -1924,57 +1924,81 @@ function drawBoss() {
 
 function drawHUD() {
   // Top HUD bar
-  const hudH = fz(38);
-  ctx.fillStyle = 'rgba(0, 10, 20, 0.5)';
+  const hudH = fz(44);
+  ctx.fillStyle = 'rgba(0, 8, 18, 0.6)';
   ctx.fillRect(0, 0, W, hudH);
-  ctx.strokeStyle = 'rgba(100, 150, 200, 0.15)';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, hudH); ctx.lineTo(W, hudH); ctx.stroke();
+  // Bottom edge glow
+  const edgeGrad = ctx.createLinearGradient(0, hudH - 2, 0, hudH + 1);
+  edgeGrad.addColorStop(0, 'rgba(100, 180, 255, 0.15)');
+  edgeGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = edgeGrad;
+  ctx.fillRect(0, hudH - 2, W, 3);
 
-  // Score (right)
-  ctx.fillStyle = '#fff';
-  ctx.font = `bold ${fz(20)}px Arial`;
-  ctx.textAlign = 'right';
-  ctx.fillText(`${score}`, W - 10, hudH*0.55);
-  ctx.fillStyle = 'rgba(150,180,220,0.6)';
-  ctx.font = `${fz(8)}px Arial`;
-  ctx.fillText(t('score'), W - 10, hudH*0.85);
+  // Pause button (far left, small)
+  const pbS = fz(22);
+  const pbX = 6, pbY = (hudH - pbS) / 2;
+  pauseBtnRect = { x: pbX, y: pbY, w: pbS, h: pbS };
+  ctx.fillStyle = 'rgba(50,60,80,0.4)';
+  ctx.beginPath(); ctx.roundRect(pbX, pbY, pbS, pbS, 4); ctx.fill();
+  ctx.fillStyle = 'rgba(180,200,230,0.6)';
+  const pBarW = pbS * 0.16, pBarH = pbS * 0.45;
+  ctx.fillRect(pbX + pbS*0.28, pbY + pbS*0.28, pBarW, pBarH);
+  ctx.fillRect(pbX + pbS*0.56, pbY + pbS*0.28, pBarW, pBarH);
+
+  // Lives (left, after pause)
+  const heartsX = pbX + pbS + fz(8);
+  ctx.textAlign = 'left';
+  const heartSize = fz(15);
+  for (let i = 0; i < 5; i++) {
+    ctx.fillStyle = i < lives ? '#ee4444' : 'rgba(80,80,80,0.3)';
+    ctx.font = `${heartSize}px Arial`;
+    ctx.fillText('\u2665', heartsX + i*fz(17), hudH*0.6);
+  }
 
   // Wave + missiles remaining (center)
   ctx.fillStyle = '#6aacee';
   ctx.font = `bold ${fz(13)}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText(`${t('wave')} ${wave}`, W/2, hudH*0.45);
+  ctx.fillText(`${t('wave')} ${wave}`, W/2, hudH*0.42);
   const missilesInPlay = waveMissilesLeft + missiles.length;
   if ((waveState === 'playing' || waveState === 'boss') && missilesInPlay > 0) {
     ctx.fillStyle = 'rgba(150,180,220,0.5)';
     ctx.font = `${fz(9)}px Arial`;
-    ctx.fillText(`${missilesInPlay} ${t('missiles')}`, W/2, hudH*0.78);
+    ctx.fillText(`${missilesInPlay} ${t('missiles')}`, W/2, hudH*0.75);
   }
 
-  // Lives (left)
-  ctx.textAlign = 'left';
-  const heartSize = fz(14);
-  for (let i = 0; i < 5; i++) {
-    ctx.fillStyle = i < lives ? '#ee4444' : 'rgba(80,80,80,0.4)';
-    ctx.font = `${heartSize}px Arial`;
-    ctx.fillText('\u2665', 8 + i*fz(18), hudH*0.6);
-  }
+  // Score (right) - BIG and prominent with glow
+  ctx.save();
+  ctx.textAlign = 'right';
+  const scoreX = W - fz(12);
+  // Score glow
+  ctx.shadowColor = 'rgba(100, 200, 255, 0.5)';
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${fz(26)}px Arial`;
+  ctx.fillText(`${score}`, scoreX, hudH*0.62);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+  // Score label
+  ctx.fillStyle = 'rgba(150,180,220,0.5)';
+  ctx.font = `${fz(8)}px Arial`;
+  ctx.textAlign = 'right';
+  ctx.fillText(t('score'), scoreX, hudH*0.88);
 
   // Ammo bar (bottom strip)
-  const barH = fz(5), barMargin = 8;
-  const barW = W - barMargin * 2;
-  const barY = H - barH - 5;
+  const barH2 = fz(5), barMargin = 8;
+  const barW2 = W - barMargin * 2;
+  const barY = H - barH2 - 5;
   ctx.fillStyle = 'rgba(0, 10, 20, 0.4)';
-  ctx.fillRect(0, barY - fz(16), W, barH + fz(22));
+  ctx.fillRect(0, barY - fz(16), W, barH2 + fz(22));
   // Bar background
   ctx.fillStyle = 'rgba(40, 50, 60, 0.6)';
-  ctx.fillRect(barMargin, barY, barW, barH);
+  ctx.fillRect(barMargin, barY, barW2, barH2);
   // Bar fill
   const ammoRatio = maxAmmo > 0 ? ammo / maxAmmo : 0;
   const ammoColor = ammoRatio > 0.5 ? '#00cc66' : ammoRatio > 0.2 ? '#ffaa00' : '#ff3333';
   ctx.fillStyle = ammoColor;
-  ctx.fillRect(barMargin, barY, barW * ammoRatio, barH);
+  ctx.fillRect(barMargin, barY, barW2 * ammoRatio, barH2);
   // Ammo text
   ctx.fillStyle = ammoRatio > 0.2 ? 'rgba(200,220,255,0.7)' : '#ff4444';
   ctx.font = `bold ${fz(9)}px Arial`;
@@ -2019,18 +2043,6 @@ function drawHUD() {
       ctx.fillRect(cbx, cby, cbw*(comboTimer/120), cbh);
     }
   }
-
-  // Pause button (top-right corner)
-  const pbS = fz(28);
-  const pbX = W - pbS - 6, pbY = 4;
-  pauseBtnRect = { x: pbX, y: pbY, w: pbS, h: pbS };
-  ctx.fillStyle = 'rgba(50,60,80,0.5)';
-  ctx.beginPath(); ctx.roundRect(pbX, pbY, pbS, pbS, 5); ctx.fill();
-  ctx.fillStyle = 'rgba(200,220,255,0.7)';
-  // Draw pause icon (two bars)
-  const barW2 = pbS * 0.18, barH2 = pbS * 0.5;
-  ctx.fillRect(pbX + pbS*0.28, pbY + pbS*0.25, barW2, barH2);
-  ctx.fillRect(pbX + pbS*0.54, pbY + pbS*0.25, barW2, barH2);
 
   // Crosshair
   if (waveState === 'playing' || waveState === 'boss') {
