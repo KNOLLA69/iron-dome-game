@@ -730,12 +730,15 @@ const cctx = cityCanvas.getContext('2d');
 
 function drawBuilding(x, w, h, opts = {}) {
   const y = GROUND_Y - h;
-  // Main structure
+  // Main structure - smoother gradient with more stops
   const grad = cctx.createLinearGradient(x, y, x + w, y + h);
   const base = opts.color || [40, 50, 70];
-  grad.addColorStop(0, `rgb(${base[0]+20},${base[1]+20},${base[2]+20})`);
-  grad.addColorStop(0.5, `rgb(${base[0]},${base[1]},${base[2]})`);
-  grad.addColorStop(1, `rgb(${base[0]-10},${base[1]-10},${base[2]-10})`);
+  grad.addColorStop(0, `rgb(${base[0]+25},${base[1]+25},${base[2]+25})`);
+  grad.addColorStop(0.15, `rgb(${base[0]+18},${base[1]+18},${base[2]+20})`);
+  grad.addColorStop(0.4, `rgb(${base[0]+5},${base[1]+5},${base[2]+8})`);
+  grad.addColorStop(0.65, `rgb(${base[0]},${base[1]},${base[2]})`);
+  grad.addColorStop(0.85, `rgb(${base[0]-5},${base[1]-5},${base[2]-3})`);
+  grad.addColorStop(1, `rgb(${base[0]-12},${base[1]-12},${base[2]-8})`);
   cctx.fillStyle = grad;
 
   if (opts.shape === 'round') {
@@ -992,56 +995,97 @@ function drawBuilding(x, w, h, opts = {}) {
     }
   }
 
-  // Glass facade - horizontal lines
-  cctx.strokeStyle = `rgba(100, 140, 180, 0.15)`;
-  cctx.lineWidth = 0.5;
-  for (let ly = y + 8; ly < GROUND_Y; ly += 6) {
+  // Glass facade - horizontal floor lines with gradient
+  for (let ly = y + 10; ly < GROUND_Y; ly += 7) {
+    const floorGrad = cctx.createLinearGradient(x, ly, x + w, ly);
+    floorGrad.addColorStop(0, `rgba(100, 150, 190, 0.03)`);
+    floorGrad.addColorStop(0.5, `rgba(100, 150, 190, 0.12)`);
+    floorGrad.addColorStop(1, `rgba(100, 150, 190, 0.03)`);
+    cctx.strokeStyle = floorGrad;
+    cctx.lineWidth = 0.5;
     cctx.beginPath();
     cctx.moveTo(x + 1, ly);
     cctx.lineTo(x + w - 1, ly);
     cctx.stroke();
   }
 
-  // Windows - lit windows with warm/cool light
-  const winW = Math.max(3, Math.min(5, w / 8));
-  const winH = 4;
-  const winGapX = winW + 3;
-  const winGapY = winH + 8;
-  const startX = x + 3;
-  const startY = y + 8;
+  // Windows - bigger, with warm/cool light and glow halos
+  const winW = Math.max(5, Math.min(7, w / 6));
+  const winH = 5;
+  const winGapX = winW + 4;
+  const winGapY = winH + 9;
+  const startX = x + 4;
+  const startY = y + 10;
 
   for (let wy = startY; wy < GROUND_Y - 10; wy += winGapY) {
-    for (let wx = startX; wx < x + w - winW - 2; wx += winGapX) {
-      const lit = Math.random() > 0.35;
+    for (let wx = startX; wx < x + w - winW - 3; wx += winGapX) {
+      const lit = Math.random() > 0.3;
       if (lit) {
         const warm = Math.random() > 0.3;
+        let r, g, b, brightness;
         if (warm) {
-          const brightness = 0.4 + Math.random() * 0.5;
-          cctx.fillStyle = `rgba(255, ${200 + Math.random()*55}, ${120 + Math.random()*80}, ${brightness})`;
+          brightness = 0.5 + Math.random() * 0.45;
+          r = 255; g = 200 + Math.random()*55; b = 120 + Math.random()*80;
         } else {
-          cctx.fillStyle = `rgba(${150 + Math.random()*60}, ${200 + Math.random()*55}, 255, ${0.3 + Math.random()*0.4})`;
+          brightness = 0.4 + Math.random()*0.45;
+          r = 150 + Math.random()*60; g = 200 + Math.random()*55; b = 255;
         }
+        // Window glow halo (soft light spill)
+        cctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${brightness * 0.08})`;
+        cctx.beginPath();
+        cctx.arc(wx + winW/2, wy + winH/2, winW * 1.3, 0, Math.PI*2);
+        cctx.fill();
+        // Window body
+        cctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${brightness})`;
+        cctx.fillRect(wx, wy, winW, winH);
+        // Bright inner highlight
+        cctx.fillStyle = `rgba(255, 255, 240, ${brightness * 0.25})`;
+        cctx.fillRect(wx + 1, wy + 1, winW - 2, winH - 2);
       } else {
-        cctx.fillStyle = `rgba(20, 25, 40, 0.6)`;
-      }
-      cctx.fillRect(wx, wy, winW, winH);
-
-      // Window reflection glow
-      if (lit) {
-        cctx.fillStyle = `rgba(255, 240, 180, 0.03)`;
-        cctx.fillRect(wx - 1, wy - 1, winW + 2, winH + 2);
+        cctx.fillStyle = `rgba(15, 20, 35, 0.7)`;
+        cctx.fillRect(wx, wy, winW, winH);
+        // Subtle glass reflection on dark windows
+        cctx.fillStyle = `rgba(80, 100, 140, 0.06)`;
+        cctx.fillRect(wx, wy, winW, 1);
       }
     }
   }
 
   // Vertical structural lines
-  cctx.strokeStyle = `rgba(30, 35, 50, 0.4)`;
+  cctx.strokeStyle = `rgba(30, 35, 50, 0.35)`;
   cctx.lineWidth = 1;
   for (let lx = x + Math.floor(w / 3); lx < x + w; lx += Math.floor(w / 3)) {
     cctx.beginPath();
     cctx.moveTo(lx, y);
     cctx.lineTo(lx, GROUND_Y);
     cctx.stroke();
+  }
+
+  // Rooftop details (water tanks, AC units)
+  if (!opts.shape || opts.shape === 'default') {
+    // Water tank
+    if (w > 18 && Math.random() > 0.4) {
+      const tww = 6 + Math.random()*4, twh = 8 + Math.random()*4;
+      const twx = x + w*0.2 + Math.random() * (w*0.4);
+      cctx.fillStyle = `rgba(${base[0]-5},${base[1]-5},${base[2]+5}, 0.8)`;
+      cctx.fillRect(twx, y - twh, tww, twh);
+      // Tank cap
+      cctx.fillStyle = `rgba(${base[0]+10},${base[1]+10},${base[2]+15}, 0.6)`;
+      cctx.fillRect(twx - 1, y - twh - 2, tww + 2, 2);
+    }
+    // AC unit
+    if (w > 15 && Math.random() > 0.5) {
+      const acw = 5 + Math.random()*3, ach = 4;
+      const acx = x + w*0.55 + Math.random() * (w*0.3);
+      cctx.fillStyle = `rgba(${base[0]+5},${base[1]+8},${base[2]+10}, 0.7)`;
+      cctx.fillRect(acx, y - ach, acw, ach);
+      // Fan grill lines
+      cctx.strokeStyle = `rgba(0,0,0,0.2)`;
+      cctx.lineWidth = 0.5;
+      for (let gl = acx + 1; gl < acx + acw - 1; gl += 2) {
+        cctx.beginPath(); cctx.moveTo(gl, y - ach + 1); cctx.lineTo(gl, y - 1); cctx.stroke();
+      }
+    }
   }
 }
 
@@ -1137,6 +1181,19 @@ for (let i = 0; i < 200; i++) {
     twinkle: Math.random() * Math.PI * 2,
     speed: 0.005 + Math.random() * 0.02,
     brightness: 0.3 + Math.random() * 0.7
+  });
+}
+
+// Clouds with parallax
+let clouds = [];
+for (let i = 0; i < 8; i++) {
+  clouds.push({
+    x: Math.random() * W * 1.5 - W * 0.25,
+    y: 30 + Math.random() * 120,
+    w: 60 + Math.random() * 120,
+    h: 18 + Math.random() * 22,
+    speed: 0.08 + Math.random() * 0.15,
+    opacity: 0.04 + Math.random() * 0.08
   });
 }
 
@@ -1489,7 +1546,8 @@ function startBoss() {
     x: W/2, y: -50, targetY: 70,
     hp: cfg.bossHP, maxHP: cfg.bossHP,
     phase: 0, timer: 0, flashTimer: 0,
-    size: 22 + wave * 2
+    size: 22 + wave * 2,
+    burstCount: 0, reloading: 0 // burst fire: 3 shots then reload pause
   };
 }
 
@@ -1535,8 +1593,13 @@ function spawnMissile(fromBoss) {
     startY = -10;
     speed = cfg.missileSpeed + Math.random()*0.4;
   }
-  const targetX = 50 + Math.random()*(W-100);
+  let targetX = 50 + Math.random()*(W-100);
   const targetY = GROUND_Y;
+  // Boss missiles have ±25% deviation - less accurate
+  if (fromBoss) {
+    const deviation = (Math.random() - 0.5) * 0.5 * W;
+    targetX = Math.max(20, Math.min(W - 20, targetX + deviation));
+  }
   const dx = targetX - startX, dy = targetY - startY;
   const dist = Math.sqrt(dx*dx + dy*dy);
   missiles.push({
@@ -1564,29 +1627,44 @@ function addFloat(x, y, text, color, size) {
 }
 
 function boom(x, y, color, count, big) {
-  explosions.push({ x, y, radius: 0, maxR: big?55:30, alpha: 1, color });
+  explosions.push({ x, y, radius: 0, maxR: big?70:38, alpha: 1, color });
+  // Multi-color gradient particles (yellow → orange → red)
+  const gradientColors = ['#ffff80', '#ffcc40', '#ff8820', '#ff4400', '#cc2200'];
   for (let i = 0; i < count; i++) {
     const a = Math.random()*Math.PI*2;
-    const s = (big?2:1) + Math.random()*(big?5:3);
+    const s = (big?2.5:1.2) + Math.random()*(big?6:3.5);
+    const gc = gradientColors[Math.floor(Math.random() * gradientColors.length)];
     particles.push({
       x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s,
-      life: 30+Math.random()*30, maxLife: 60,
-      color, size: 1+Math.random()*(big?3.5:2)
+      life: 35+Math.random()*35, maxLife: 70,
+      color: Math.random() > 0.4 ? gc : color, size: 1.2+Math.random()*(big?4:2.5)
     });
   }
-  // Add sparks
-  for (let i = 0; i < (big ? 15 : 6); i++) {
+  // Bright sparks
+  for (let i = 0; i < (big ? 20 : 8); i++) {
     const a = Math.random()*Math.PI*2;
-    const s = 2 + Math.random()*4;
+    const s = 2.5 + Math.random()*5;
     particles.push({
-      x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s - 1,
-      life: 15+Math.random()*15, maxLife: 30,
-      color: '#fff', size: 0.5+Math.random()
+      x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s - 1.5,
+      life: 18+Math.random()*18, maxLife: 36,
+      color: '#fff', size: 0.6+Math.random()*1.2
     });
+  }
+  // Ember particles that float up (big explosions only)
+  if (big) {
+    for (let i = 0; i < 12; i++) {
+      particles.push({
+        x: x + (Math.random()-0.5)*20, y,
+        vx: (Math.random()-0.5)*1.2, vy: -1 - Math.random()*2,
+        life: 50+Math.random()*40, maxLife: 90,
+        color: Math.random()>0.5 ? '#ff8800' : '#ffcc00', size: 0.8+Math.random()*1.5
+      });
+    }
   }
 }
 
-function shake(d) { shakeDuration = Math.max(shakeDuration, d); }
+let shakeMaxDuration = 0;
+function shake(d) { shakeDuration = Math.max(shakeDuration, d); shakeMaxDuration = Math.max(shakeMaxDuration, d); }
 
 // ==================== UPDATE ====================
 function update() {
@@ -1660,8 +1738,20 @@ function update() {
     boss.timer++; boss.phase += 0.02;
     boss.x = W/2 + Math.sin(boss.phase)*250;
     if (boss.flashTimer > 0) boss.flashTimer--;
-    const shootRate = Math.max(28, 75 - wave*5);
-    if (boss.timer % shootRate === 0) spawnMissile(true);
+    // Boss burst-fire: 3 shots then reload pause
+    if (boss.reloading > 0) {
+      boss.reloading--;
+    } else {
+      const shootRate = Math.max(50, 90 - wave*3);
+      if (boss.timer % shootRate === 0) {
+        spawnMissile(true);
+        boss.burstCount++;
+        if (boss.burstCount >= 3) {
+          boss.burstCount = 0;
+          boss.reloading = 90; // 1.5s reload pause
+        }
+      }
+    }
     if (boss.hp <= 0) {
       const pts = 50 * wave;
       score += pts;
@@ -1825,8 +1915,11 @@ function update() {
   }
 
   if (shakeDuration > 0) {
-    shakeX = (Math.random()-0.5)*8; shakeY = (Math.random()-0.5)*8;
+    const shakeIntensity = (shakeDuration / Math.max(1, shakeMaxDuration)); // ease-out
+    const mag = 8 * shakeIntensity;
+    shakeX = (Math.random()-0.5)*mag; shakeY = (Math.random()-0.5)*mag;
     shakeDuration--;
+    if (shakeDuration <= 0) shakeMaxDuration = 0;
   } else { shakeX = 0; shakeY = 0; }
 }
 
@@ -1878,6 +1971,30 @@ function draw() {
       ctx.fill();
     });
   }
+
+  // Clouds - parallax, semi-transparent, adapt to time of day
+  clouds.forEach(c => {
+    c.x += c.speed;
+    if (c.x > W + c.w) c.x = -c.w - 20;
+    const cAlpha = timeOfDay === 2 ? c.opacity * 0.3 : timeOfDay === 1 ? c.opacity * 0.7 : c.opacity;
+    const cR = timeOfDay === 0 ? 255 : timeOfDay === 1 ? 240 : 140;
+    const cG = timeOfDay === 0 ? 255 : timeOfDay === 1 ? 180 : 150;
+    const cB = timeOfDay === 0 ? 255 : timeOfDay === 1 ? 140 : 180;
+    // Cloud body - multiple overlapping ellipses for fluffy look
+    ctx.fillStyle = `rgba(${cR},${cG},${cB},${cAlpha})`;
+    ctx.beginPath();
+    ctx.ellipse(c.x + c.w*0.35, c.y, c.w*0.35, c.h*0.6, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(c.x + c.w*0.55, c.y - c.h*0.15, c.w*0.3, c.h*0.7, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(c.x + c.w*0.7, c.y + c.h*0.05, c.w*0.25, c.h*0.5, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(c.x + c.w*0.15, c.y + c.h*0.1, c.w*0.2, c.h*0.4, 0, 0, Math.PI*2);
+    ctx.fill();
+  });
 
   // Sun or Moon depending on time of day
   if (timeOfDay === 0) {
@@ -1995,15 +2112,31 @@ function draw() {
       }
     }
   }
-  // Animated water shimmer
-  for (let i = 0; i < 30; i++) {
-    const sx = (i * 37 + frame * 0.3) % W;
-    const sy = GROUND_Y + 8 + Math.sin(frame * 0.02 + i) * 3 + (i % 5) * 7;
-    const shimmerR = timeOfDay === 0 ? 180 : timeOfDay === 1 ? 200 : 150;
-    const shimmerG = timeOfDay === 0 ? 220 : timeOfDay === 1 ? 150 : 200;
-    const shimmerB = timeOfDay === 0 ? 255 : timeOfDay === 1 ? 100 : 255;
-    ctx.fillStyle = `rgba(${shimmerR}, ${shimmerG}, ${shimmerB}, ${0.02 + Math.sin(frame*0.05 + i)*0.015})`;
-    ctx.fillRect(sx, sy, 8 + Math.sin(i)*3, 1);
+  // Animated water shimmer - more visible
+  for (let i = 0; i < 40; i++) {
+    const sx = (i * 31 + frame * 0.3) % W;
+    const sy = GROUND_Y + 6 + Math.sin(frame * 0.02 + i) * 4 + (i % 6) * 6;
+    const shimmerR = timeOfDay === 0 ? 200 : timeOfDay === 1 ? 220 : 160;
+    const shimmerG = timeOfDay === 0 ? 230 : timeOfDay === 1 ? 160 : 210;
+    const shimmerB = timeOfDay === 0 ? 255 : timeOfDay === 1 ? 110 : 255;
+    const shimmerA = 0.025 + Math.sin(frame*0.05 + i)*0.02;
+    ctx.fillStyle = `rgba(${shimmerR}, ${shimmerG}, ${shimmerB}, ${shimmerA})`;
+    ctx.fillRect(sx, sy, 10 + Math.sin(i)*4, 1);
+  }
+  // City light reflections on water (vertical streaks mirroring buildings)
+  if (timeOfDay >= 1) {
+    const reflAlpha = timeOfDay === 2 ? 0.03 : 0.015;
+    for (let rx = 0; rx < W; rx += 25 + Math.random()*30) {
+      const rw = 2 + Math.random()*5;
+      const rh = 15 + Math.random()*20;
+      const ry = GROUND_Y + 3 + Math.random()*5;
+      const rAlpha = reflAlpha * (0.5 + Math.random()*0.5);
+      const warm = Math.random() > 0.4;
+      ctx.fillStyle = warm
+        ? `rgba(255, 220, 150, ${rAlpha})`
+        : `rgba(150, 200, 255, ${rAlpha})`;
+      ctx.fillRect(rx, ry + Math.sin(frame*0.03 + rx*0.1)*2, rw, rh);
+    }
   }
 
   // City skyline (pre-rendered)
@@ -2041,26 +2174,37 @@ function draw() {
   // Boss
   if (boss) drawBoss();
 
-  // Smoke trails
+  // Smoke trails - softer, more atmospheric
   smokeTrails.forEach(s => {
-    const alpha = (s.life / s.maxLife) * 0.3;
-    ctx.fillStyle = `rgba(180, 190, 200, ${alpha})`;
+    const alpha = (s.life / s.maxLife) * 0.35;
+    const grd = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size);
+    grd.addColorStop(0, `rgba(190, 200, 210, ${alpha})`);
+    grd.addColorStop(1, `rgba(160, 170, 180, 0)`);
+    ctx.fillStyle = grd;
     ctx.beginPath();
-    ctx.arc(s.x, s.y, s.size, 0, Math.PI*2);
+    ctx.arc(s.x, s.y, s.size * 1.3, 0, Math.PI*2);
     ctx.fill();
   });
 
   // Missiles
   missiles.forEach(m => {
-    // Smoke trail
+    // Smoke trail - thicker, more visible with glow
     m.trail.forEach((t, idx) => {
-      const alpha = (idx / m.trail.length) * 0.4;
-      const sz = m.isBoss ? 3 : 1.5;
+      const alpha = (idx / m.trail.length) * 0.5;
+      const sz = m.isBoss ? 3.5 : 2;
+      // Outer smoke glow
+      ctx.fillStyle = m.isBoss
+        ? `rgba(255, 40, 40, ${alpha * 0.15})`
+        : `rgba(255, 100, 30, ${alpha * 0.12})`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, sz*2.5 + (1 - idx/m.trail.length)*2, 0, Math.PI*2);
+      ctx.fill();
+      // Inner trail
       ctx.fillStyle = m.isBoss
         ? `rgba(255, 60, 60, ${alpha})`
-        : `rgba(255, 120, 40, ${alpha})`;
+        : `rgba(255, 130, 50, ${alpha})`;
       ctx.beginPath();
-      ctx.arc(t.x, t.y, sz + (1 - idx/m.trail.length)*1.5, 0, Math.PI*2);
+      ctx.arc(t.x, t.y, sz + (1 - idx/m.trail.length)*1.8, 0, Math.PI*2);
       ctx.fill();
     });
 
@@ -2140,12 +2284,18 @@ function draw() {
 
   // Interceptors (Tamir missiles)
   interceptors.forEach(ic => {
-    // Trail - bright engine exhaust
+    // Trail - bright engine exhaust with glow
     ic.trail.forEach((t, idx) => {
       const alpha = (idx / ic.trail.length);
-      ctx.fillStyle = `rgba(150, 220, 255, ${alpha * 0.6})`;
+      // Outer glow trail
+      ctx.fillStyle = `rgba(100, 180, 255, ${alpha * 0.08})`;
       ctx.beginPath();
-      ctx.arc(t.x, t.y, 1 + alpha, 0, Math.PI*2);
+      ctx.arc(t.x, t.y, 4 + alpha*3, 0, Math.PI*2);
+      ctx.fill();
+      // Inner bright trail
+      ctx.fillStyle = `rgba(180, 230, 255, ${alpha * 0.65})`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, 1.2 + alpha*1.2, 0, Math.PI*2);
       ctx.fill();
     });
 
@@ -2192,19 +2342,34 @@ function draw() {
 
     ctx.restore();
 
-    // Glow
-    ctx.fillStyle = 'rgba(100,200,255,0.06)';
+    // Glow - larger, more visible
+    const iglow = ctx.createRadialGradient(ic.x, ic.y, 0, ic.x, ic.y, 16);
+    iglow.addColorStop(0, 'rgba(150,230,255,0.12)');
+    iglow.addColorStop(0.5, 'rgba(100,180,255,0.05)');
+    iglow.addColorStop(1, 'rgba(50,100,255,0)');
+    ctx.fillStyle = iglow;
     ctx.beginPath();
-    ctx.arc(ic.x, ic.y, 10, 0, Math.PI*2);
+    ctx.arc(ic.x, ic.y, 16, 0, Math.PI*2);
     ctx.fill();
   });
 
-  // Explosions
+  // Explosions - multi-layer with glow
   explosions.forEach(e => {
+    // Outer soft glow
+    const outerGlow = ctx.createRadialGradient(e.x, e.y, e.radius*0.5, e.x, e.y, e.radius*1.4);
+    outerGlow.addColorStop(0, `rgba(255,180,80,${e.alpha*0.12})`);
+    outerGlow.addColorStop(1, 'rgba(255,100,20,0)');
+    ctx.fillStyle = outerGlow;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.radius*1.4, 0, Math.PI*2);
+    ctx.fill();
+    // Main explosion
     const grad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.radius);
-    grad.addColorStop(0, `rgba(255,255,255,${e.alpha*0.8})`);
-    grad.addColorStop(0.3, `rgba(255,200,100,${e.alpha*0.5})`);
-    grad.addColorStop(0.6, e.color + Math.floor(Math.min(1,e.alpha)*200).toString(16).padStart(2,'0').slice(0,2));
+    grad.addColorStop(0, `rgba(255,255,240,${e.alpha*0.9})`);
+    grad.addColorStop(0.15, `rgba(255,255,200,${e.alpha*0.75})`);
+    grad.addColorStop(0.35, `rgba(255,200,80,${e.alpha*0.55})`);
+    grad.addColorStop(0.6, `rgba(255,120,30,${e.alpha*0.3})`);
+    grad.addColorStop(0.85, `rgba(200,40,0,${e.alpha*0.1})`);
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
@@ -2213,11 +2378,24 @@ function draw() {
   });
 
   particles.forEach(p => {
-    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-    ctx.fill();
+    const pAlpha = Math.max(0, p.life / p.maxLife);
+    if (p.size > 1.5) {
+      // Larger particles get soft radial gradient
+      const pg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+      pg.addColorStop(0, p.color);
+      pg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = pAlpha;
+      ctx.fillStyle = pg;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 1.3, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.globalAlpha = pAlpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+      ctx.fill();
+    }
   });
   ctx.globalAlpha = 1;
 
@@ -2382,6 +2560,13 @@ function draw() {
     ctx.fillRect(0, 0, W, H);
   }
 
+  // Subtle vignette for cinematic depth
+  const vignGrad = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.35, W/2, H/2, Math.max(W,H)*0.75);
+  vignGrad.addColorStop(0, 'rgba(0,0,0,0)');
+  vignGrad.addColorStop(1, 'rgba(0,0,0,0.25)');
+  ctx.fillStyle = vignGrad;
+  ctx.fillRect(0, 0, W, H);
+
   // Pause overlay
   if (state === 'playing' && paused) {
     ctx.fillStyle = 'rgba(0,0,10,0.7)';
@@ -2483,26 +2668,62 @@ function drawCityIntro() {
   const waveRange = `${t('wave')} ${city.waves[0]} - ${city.waves[city.waves.length - 1]}`;
   ctx.fillText(waveRange, W/2, H/2 + fz(35));
 
-  // Progress bar showing city progression
+  // Decorative dividers
+  ctx.strokeStyle = `rgba(100, 200, 255, ${0.25 * alpha})`;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(W/2 - fz(80), H/2 + fz(45));
+  ctx.lineTo(W/2 + fz(80), H/2 + fz(45));
+  ctx.stroke();
+
+  // Progress bar showing city progression with glow
   const barW = fz(200), barH = fz(6);
   const barX = W/2 - barW/2, barY = H/2 + fz(55);
   ctx.fillStyle = 'rgba(40, 60, 100, 0.5)';
-  ctx.fillRect(barX, barY, barW, barH);
+  ctx.beginPath(); ctx.roundRect(barX, barY, barW, barH, 3); ctx.fill();
   const cityProgress = (currentCityIdx + 1) / CITIES.length;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,170,255,0.4)';
+  ctx.shadowBlur = 6;
   ctx.fillStyle = '#00aaff';
-  ctx.fillRect(barX, barY, barW * cityProgress, barH);
+  ctx.beginPath(); ctx.roundRect(barX, barY, barW * cityProgress, barH, 3); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+  // City dots on progress bar
+  for (let ci = 0; ci < CITIES.length; ci++) {
+    const dotX = barX + (barW / CITIES.length) * (ci + 0.5);
+    ctx.fillStyle = ci <= currentCityIdx ? '#00ddff' : 'rgba(100,150,200,0.4)';
+    ctx.beginPath(); ctx.arc(dotX, barY + barH/2, 3, 0, Math.PI*2); ctx.fill();
+  }
 
   ctx.globalAlpha = 1;
 }
 
 function drawBoss() {
   const bx = boss.x, by = boss.y, sz = boss.size;
-  // Glow
-  ctx.fillStyle = `rgba(255,30,30,${0.08+Math.sin(frame*0.05)*0.04})`;
-  ctx.beginPath(); ctx.arc(bx, by, sz+20, 0, Math.PI*2); ctx.fill();
-  // Body
-  const col = boss.flashTimer > 0 ? '#fff' : '#992222';
-  ctx.fillStyle = col;
+  // Pulsing outer aura
+  const pulse = 0.5 + Math.sin(frame*0.04)*0.3;
+  const auraGrad = ctx.createRadialGradient(bx, by, sz*0.5, bx, by, sz+40);
+  auraGrad.addColorStop(0, `rgba(255,30,30,${0.12*pulse})`);
+  auraGrad.addColorStop(0.5, `rgba(255,0,0,${0.06*pulse})`);
+  auraGrad.addColorStop(1, 'rgba(200,0,0,0)');
+  ctx.fillStyle = auraGrad;
+  ctx.beginPath(); ctx.arc(bx, by, sz+40, 0, Math.PI*2); ctx.fill();
+  // Inner glow ring
+  ctx.strokeStyle = `rgba(255,80,60,${0.15 + Math.sin(frame*0.06)*0.08})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(bx, by, sz+12, 0, Math.PI*2); ctx.stroke();
+  // Body with gradient
+  const bodyGrad = ctx.createLinearGradient(bx - sz, by - sz, bx + sz, by + sz*0.4);
+  if (boss.flashTimer > 0) {
+    bodyGrad.addColorStop(0, '#fff');
+    bodyGrad.addColorStop(1, '#ffcccc');
+  } else {
+    bodyGrad.addColorStop(0, '#bb3333');
+    bodyGrad.addColorStop(0.5, '#992222');
+    bodyGrad.addColorStop(1, '#661515');
+  }
+  ctx.fillStyle = bodyGrad;
   ctx.beginPath();
   ctx.moveTo(bx, by - sz);
   ctx.lineTo(bx + sz*0.9, by);
@@ -2511,25 +2732,57 @@ function drawBoss() {
   ctx.lineTo(bx - sz*0.9, by);
   ctx.closePath();
   ctx.fill();
-  // Details
+  // Edge highlight
+  ctx.strokeStyle = 'rgba(255,100,80,0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Core details
   ctx.fillStyle = '#cc3333';
   ctx.beginPath(); ctx.arc(bx, by-sz*0.15, sz*0.3, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#ffcc00';
   ctx.beginPath(); ctx.arc(bx, by-sz*0.15, sz*0.12, 0, Math.PI*2); ctx.fill();
-  // HP bar
-  const barW = 90, barH = 6;
-  const barX = bx-barW/2, barY = by-sz-22;
-  ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  ctx.fillRect(barX-1, barY-1, barW+2, barH+2);
-  ctx.fillStyle = '#333';
-  ctx.fillRect(barX, barY, barW, barH);
+  // Eye glow
+  const eyeGlow = ctx.createRadialGradient(bx, by-sz*0.15, 0, bx, by-sz*0.15, sz*0.25);
+  eyeGlow.addColorStop(0, 'rgba(255,220,50,0.4)');
+  eyeGlow.addColorStop(1, 'rgba(255,180,0,0)');
+  ctx.fillStyle = eyeGlow;
+  ctx.beginPath(); ctx.arc(bx, by-sz*0.15, sz*0.25, 0, Math.PI*2); ctx.fill();
+  // Reload indicator (visual feedback when reloading)
+  if (boss.reloading > 0) {
+    const reloadRatio = boss.reloading / 90;
+    ctx.strokeStyle = `rgba(255,180,0,${0.5 * reloadRatio})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(bx, by, sz + 6, -Math.PI/2, -Math.PI/2 + (1-reloadRatio)*Math.PI*2);
+    ctx.stroke();
+  }
+  // HP bar - wider, more polished
+  const barW = 100, barH = 7;
+  const barX = bx-barW/2, barY = by-sz-25;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath(); ctx.roundRect(barX-1, barY-1, barW+2, barH+2, 3); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.roundRect(barX, barY, barW, barH, 2); ctx.fill();
   const hpRatio = boss.hp/boss.maxHP;
-  ctx.fillStyle = hpRatio > 0.5 ? '#ff4444' : hpRatio > 0.25 ? '#ff8800' : '#ff0000';
-  ctx.fillRect(barX, barY, barW*hpRatio, barH);
+  const hpColor = hpRatio > 0.5 ? '#ff4444' : hpRatio > 0.25 ? '#ff8800' : '#ff0000';
+  const hpGrad = ctx.createLinearGradient(barX, barY, barX, barY+barH);
+  hpGrad.addColorStop(0, hpColor);
+  hpGrad.addColorStop(1, hpRatio > 0.5 ? '#cc2222' : hpRatio > 0.25 ? '#cc6600' : '#cc0000');
+  ctx.fillStyle = hpGrad;
+  ctx.beginPath(); ctx.roundRect(barX, barY, barW*hpRatio, barH, 2); ctx.fill();
+  // HP bar shine
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath(); ctx.roundRect(barX, barY, barW*hpRatio, barH/2, 2); ctx.fill();
+  // Boss label with shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,0,0,0.5)';
+  ctx.shadowBlur = 6;
   ctx.fillStyle = '#ff8888';
-  ctx.font = 'bold 11px Arial';
+  ctx.font = 'bold 12px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText(`${t('bossApproach')} ${wave}`, bx, barY-5);
+  ctx.fillText(`${t('bossApproach')} ${wave}`, bx, barY-6);
+  ctx.shadowBlur = 0;
+  ctx.restore();
 }
 
 function drawHUD() {
@@ -2605,11 +2858,26 @@ function drawHUD() {
   // Bar background
   ctx.fillStyle = 'rgba(40, 50, 60, 0.6)';
   ctx.fillRect(barMargin, barY, barW2, barH2);
-  // Bar fill
+  // Bar fill with gradient
   const ammoRatio = maxAmmo > 0 ? ammo / maxAmmo : 0;
-  const ammoColor = ammoRatio > 0.5 ? '#00cc66' : ammoRatio > 0.2 ? '#ffaa00' : '#ff3333';
-  ctx.fillStyle = ammoColor;
-  ctx.fillRect(barMargin, barY, barW2 * ammoRatio, barH2);
+  if (ammoRatio > 0) {
+    const ammoGrad = ctx.createLinearGradient(barMargin, barY, barMargin, barY + barH2);
+    if (ammoRatio > 0.5) {
+      ammoGrad.addColorStop(0, '#22dd77');
+      ammoGrad.addColorStop(1, '#00aa55');
+    } else if (ammoRatio > 0.2) {
+      ammoGrad.addColorStop(0, '#ffcc33');
+      ammoGrad.addColorStop(1, '#dd8800');
+    } else {
+      ammoGrad.addColorStop(0, '#ff5555');
+      ammoGrad.addColorStop(1, '#cc2222');
+    }
+    ctx.fillStyle = ammoGrad;
+    ctx.fillRect(barMargin, barY, barW2 * ammoRatio, barH2);
+    // Ammo bar shine
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(barMargin, barY, barW2 * ammoRatio, barH2 / 2);
+  }
   // Ammo text
   ctx.fillStyle = ammoRatio > 0.2 ? 'rgba(200,220,255,0.7)' : '#ff4444';
   ctx.font = `bold ${fz(9)}px Arial`;
@@ -2680,15 +2948,25 @@ function drawWaveTransition() {
   if (waveState !== 'transition') return;
   const p = 1 - waveTransitionTimer/300;
   const alpha = p < 0.15 ? p/0.15 : p > 0.85 ? (1-p)/0.15 : 1;
-  ctx.fillStyle = `rgba(0,15,30,${alpha*0.7})`;
+  ctx.fillStyle = `rgba(0,15,30,${alpha*0.75})`;
   ctx.fillRect(0, H/2-65, W, 130);
+  // Top/bottom border lines
+  ctx.fillStyle = `rgba(100,200,255,${alpha*0.2})`;
+  ctx.fillRect(0, H/2-65, W, 1);
+  ctx.fillRect(0, H/2+64, W, 1);
   ctx.globalAlpha = alpha;
+  ctx.save();
+  ctx.shadowColor = 'rgba(100,200,255,0.6)';
+  ctx.shadowBlur = 10;
   ctx.fillStyle = '#4ac8ff';
   ctx.font = 'bold 32px Arial';
   ctx.textAlign = 'center';
   ctx.fillText(`${t('wave')} ${wave} ${t('waveComplete')}`, W/2, H/2-18);
+  ctx.shadowBlur = 0;
+  ctx.restore();
   ctx.fillStyle = '#8ad8ff';
   ctx.font = '18px Arial';
+  ctx.textAlign = 'center';
   const nextWave = wave + 1;
   if (nextWave <= 15) {
     ctx.fillText(`${t('nextWave')} ${nextWave}...`, W/2, H/2+12);
@@ -2697,14 +2975,25 @@ function drawWaveTransition() {
     if (nextCityIdx !== currentCityIdx) {
       const nextCity = CITIES[nextCityIdx];
       const nextCityName = nextCity.name[currentLang] || nextCity.name.en;
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,220,50,0.5)';
+      ctx.shadowBlur = 8;
       ctx.fillStyle = '#ffdd00';
-      ctx.font = 'bold 16px Arial';
+      ctx.font = 'bold 18px Arial';
       ctx.fillText(`\u279C ${nextCityName}`, W/2, H/2+35);
+      ctx.shadowBlur = 0;
+      ctx.restore();
     }
     if (getWaveConfig(nextWave).hasBoss) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,50,50,0.6)';
+      ctx.shadowBlur = 8;
       ctx.fillStyle = '#ff6666';
       ctx.font = 'bold 15px Arial';
+      ctx.textAlign = 'center';
       ctx.fillText(t('bossWarn'), W/2, H/2+55);
+      ctx.shadowBlur = 0;
+      ctx.restore();
     }
   }
   ctx.globalAlpha = 1;
@@ -2820,27 +3109,42 @@ function drawMenu() {
   ctx.fillText(t('title'), W/2, titleY);
   ctx.shadowBlur = 0;
 
-  ctx.fillStyle = '#6aacee';
+  ctx.save();
+  ctx.shadowColor = 'rgba(100,180,255,0.4)';
+  ctx.shadowBlur = 6;
+  ctx.fillStyle = '#7abcee';
   ctx.font = `${fz(16)}px Arial`;
   ctx.fillText(t('subtitle'), W/2, titleY + fz(28));
+  ctx.shadowBlur = 0;
+  ctx.restore();
 
-  // Divider
-  ctx.strokeStyle = 'rgba(100,200,255,0.2)';
+  // Divider with glow
+  ctx.save();
+  ctx.shadowColor = 'rgba(100,200,255,0.3)';
+  ctx.shadowBlur = 4;
+  ctx.strokeStyle = 'rgba(100,200,255,0.3)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(W/2 - 90, titleY + fz(40));
-  ctx.lineTo(W/2 + 90, titleY + fz(40));
+  ctx.moveTo(W/2 - 100, titleY + fz(40));
+  ctx.lineTo(W/2 + 100, titleY + fz(40));
   ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.restore();
 
-  ctx.fillStyle = '#bbb';
+  ctx.fillStyle = '#ccc';
   ctx.font = `${fz(12)}px Arial`;
   const lineH = fz(20);
   const iy = titleY + fz(55);
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 3;
   ctx.fillText(isMobile ? t('instrAim') : t('instrAimDesktop'), W/2, iy);
   ctx.fillText(t('instrCombo'), W/2, iy + lineH);
   ctx.fillText(t('instrBoss'), W/2, iy + lineH*2);
-  ctx.fillStyle = '#ff8888';
+  ctx.fillStyle = '#ff9999';
   ctx.fillText(t('instrWarn'), W/2, iy + lineH*3);
+  ctx.shadowBlur = 0;
+  ctx.restore();
 
   if (highScore > 0) {
     ctx.fillStyle = '#ffdd00';
@@ -2848,21 +3152,36 @@ function drawMenu() {
     ctx.fillText(`${t('best')}: ${highScore}`, W/2, iy + lineH*4 + fz(8));
   }
 
-  // Start button
+  // Start button with glow
   const btnW = fz(200), btnH = fz(46);
   const btnY = iy + lineH*4 + fz(28);
   startBtnRect = { x: W/2 - btnW/2, y: btnY, w: btnW, h: btnH };
+  // Button glow behind
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,200,100,0.35)';
+  ctx.shadowBlur = 15;
   const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY+btnH);
-  btnGrad.addColorStop(0, '#00bb55');
+  btnGrad.addColorStop(0, '#00cc66');
+  btnGrad.addColorStop(0.5, '#00bb55');
   btnGrad.addColorStop(1, '#008833');
   ctx.fillStyle = btnGrad;
-  ctx.beginPath(); ctx.roundRect(startBtnRect.x, btnY, btnW, btnH, 10); ctx.fill();
-  ctx.strokeStyle = 'rgba(0,255,100,0.3)';
+  ctx.beginPath(); ctx.roundRect(startBtnRect.x, btnY, btnW, btnH, 12); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+  // Button shine highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  ctx.beginPath(); ctx.roundRect(startBtnRect.x + 2, btnY + 1, btnW - 4, btnH*0.45, [10,10,0,0]); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,255,100,0.35)';
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.roundRect(startBtnRect.x, btnY, btnW, btnH, 10); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(startBtnRect.x, btnY, btnW, btnH, 12); ctx.stroke();
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 3;
   ctx.fillStyle = '#fff';
   ctx.font = `bold ${fz(20)}px Arial`;
   ctx.fillText(t('start'), W/2, btnY + btnH*0.65);
+  ctx.shadowBlur = 0;
+  ctx.restore();
 
   // Leaderboard button
   const lbW = fz(160), lbH = fz(34);
@@ -3061,27 +3380,42 @@ function drawVictory() {
   const btnY = vY + fz(178);
   const startX = W/2 - totalBtnW / 2;
 
-  // Play again
+  // Play again with glow
   playAgainBtnRect = { x: startX, y: btnY, w: playW, h: playH };
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,200,100,0.3)';
+  ctx.shadowBlur = 12;
   const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY + playH);
-  btnGrad.addColorStop(0, '#00bb55');
+  btnGrad.addColorStop(0, '#00cc66');
+  btnGrad.addColorStop(0.5, '#00bb55');
   btnGrad.addColorStop(1, '#008833');
   ctx.fillStyle = btnGrad;
-  ctx.beginPath(); ctx.roundRect(startX, btnY, playW, playH, 10); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(startX, btnY, playW, playH, 12); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath(); ctx.roundRect(startX + 2, btnY + 1, playW - 4, playH*0.4, [10,10,0,0]); ctx.fill();
   ctx.fillStyle = '#fff';
   ctx.font = `bold ${fz(17)}px Arial`;
+  ctx.textAlign = 'center';
   ctx.fillText(t('playAgain'), startX + playW / 2, btnY + playH * 0.63);
 
-  // Leaderboard button
+  // Leaderboard button with glow
   const lbX = startX + playW + gap;
   lbBtnRect = { x: lbX, y: btnY, w: lbW2, h: lbH2 };
+  ctx.save();
+  ctx.shadowColor = 'rgba(80,150,255,0.2)';
+  ctx.shadowBlur = 8;
   ctx.fillStyle = 'rgba(30,50,80,0.7)';
-  ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 10); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 12); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
   ctx.strokeStyle = 'rgba(100,150,220,0.4)';
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 10); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 12); ctx.stroke();
   ctx.fillStyle = '#6aacee';
   ctx.font = `bold ${fz(18)}px Arial`;
+  ctx.textAlign = 'center';
   ctx.fillText('\u{1F3C6}', lbX + lbW2 / 2, btnY + lbH2 * 0.63);
 }
 
@@ -3118,22 +3452,40 @@ function drawGameOver() {
 
   const goY = H * 0.12;
 
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,50,50,0.6)';
+  ctx.shadowBlur = 15;
   ctx.fillStyle = '#ff4444';
   ctx.font = `bold ${fz(34)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(t('gameOver'), W/2, goY);
+  ctx.shadowBlur = 0;
+  ctx.restore();
 
   // Score + best
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,255,255,0.4)';
+  ctx.shadowBlur = 8;
   ctx.fillStyle = '#fff';
   ctx.font = `bold ${fz(30)}px Arial`;
+  ctx.textAlign = 'center';
   ctx.fillText(`${score}`, W/2, goY + fz(42));
+  ctx.shadowBlur = 0;
+  ctx.restore();
   if (score >= highScore && score > 0) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,220,50,0.5)';
+    ctx.shadowBlur = 8;
     ctx.fillStyle = '#ffdd00';
     ctx.font = `bold ${fz(14)}px Arial`;
+    ctx.textAlign = 'center';
     ctx.fillText(t('newRecord'), W/2, goY + fz(62));
+    ctx.shadowBlur = 0;
+    ctx.restore();
   } else {
     ctx.fillStyle = '#888';
     ctx.font = `${fz(12)}px Arial`;
+    ctx.textAlign = 'center';
     ctx.fillText(`${t('best')}: ${highScore}`, W/2, goY + fz(62));
   }
 
@@ -3163,25 +3515,39 @@ function drawGameOver() {
   const btnY = goY + fz(125);
   const startX = W/2 - totalBtnW/2;
 
-  // Play again
+  // Play again with glow
   playAgainBtnRect = { x: startX, y: btnY, w: playW, h: playH };
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,200,100,0.3)';
+  ctx.shadowBlur = 12;
   const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY+playH);
-  btnGrad.addColorStop(0, '#00bb55');
+  btnGrad.addColorStop(0, '#00cc66');
+  btnGrad.addColorStop(0.5, '#00bb55');
   btnGrad.addColorStop(1, '#008833');
   ctx.fillStyle = btnGrad;
-  ctx.beginPath(); ctx.roundRect(startX, btnY, playW, playH, 10); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(startX, btnY, playW, playH, 12); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+  // Button shine
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath(); ctx.roundRect(startX + 2, btnY + 1, playW - 4, playH*0.4, [10,10,0,0]); ctx.fill();
   ctx.fillStyle = '#fff';
   ctx.font = `bold ${fz(17)}px Arial`;
   ctx.fillText(t('playAgain'), startX + playW/2, btnY + playH*0.63);
 
-  // Leaderboard button
+  // Leaderboard button with glow
   const lbX = startX + playW + gap;
   lbBtnRect = { x: lbX, y: btnY, w: lbW2, h: lbH2 };
+  ctx.save();
+  ctx.shadowColor = 'rgba(80,150,255,0.2)';
+  ctx.shadowBlur = 8;
   ctx.fillStyle = 'rgba(30,50,80,0.7)';
-  ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 10); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 12); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
   ctx.strokeStyle = 'rgba(100,150,220,0.4)';
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 10); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 12); ctx.stroke();
   ctx.fillStyle = '#6aacee';
   ctx.font = `bold ${fz(18)}px Arial`;
   ctx.fillText(`\u{1F3C6}`, lbX + lbW2/2, btnY + lbH2*0.63);
