@@ -62,7 +62,8 @@ const TEXTS = {
     waveLabel: 'גל', comboMax: 'קומבו מקסימלי',
     batteryLabel: 'כיפת ברזל',
     leaderboard: 'טבלת שיאים', enterName: 'הכנס שם (עד 6 תווים)', submit: 'שלח',
-    noAmmo: 'אין מיירטים!', outOfAmmo: 'נגמרו המיירטים'
+    noAmmo: 'אין מיירטים!', outOfAmmo: 'נגמרו המיירטים',
+    paused: 'השהייה', resume: 'המשך משחק'
   },
   en: {
     title: 'IRON DOME', subtitle: 'Defend Tel Aviv',
@@ -84,7 +85,8 @@ const TEXTS = {
     waveLabel: 'Wave', comboMax: 'Max combo',
     batteryLabel: 'IRON DOME',
     leaderboard: 'LEADERBOARD', enterName: 'Enter name (max 6 chars)', submit: 'Submit',
-    noAmmo: 'No ammo!', outOfAmmo: 'Out of interceptors'
+    noAmmo: 'No ammo!', outOfAmmo: 'Out of interceptors',
+    paused: 'Paused', resume: 'Resume'
   },
   de: {
     title: 'IRON DOME', subtitle: 'Tel Aviv verteidigen',
@@ -106,7 +108,8 @@ const TEXTS = {
     waveLabel: 'Welle', comboMax: 'Max Kombo',
     batteryLabel: 'IRON DOME',
     leaderboard: 'BESTENLISTE', enterName: 'Name eingeben (max 6)', submit: 'Senden',
-    noAmmo: 'Keine Munition!', outOfAmmo: 'Abfangjäger leer'
+    noAmmo: 'Keine Munition!', outOfAmmo: 'Abfangjäger leer',
+    paused: 'Pause', resume: 'Weiter'
   }
 };
 let currentLang = localStorage.getItem('ironDomeLang') || 'he';
@@ -516,6 +519,8 @@ function stopMusic() {
 const W = canvas.width, H = canvas.height;
 const DESIGN_W = 1100; // original design width for scaling
 const scaleX = W / DESIGN_W;
+const fontS = isMobileDevice ? 1.6 : 1; // font scale for mobile readability
+function fz(px) { return Math.round(px * fontS); } // scaled font size helper
 const GROUND_Y = H - 55;
 const SEA_Y = GROUND_Y + 5;
 const batteryX = W / 2;
@@ -738,6 +743,9 @@ let langBtnRects = []; // [{x,y,w,h,lang}]
 let nameInput = '';
 let nameInputActive = false;
 let showLeaderboard = false;
+// Pause
+let paused = false;
+let pauseBtnRect = { x: 0, y: 0, w: 0, h: 0 };
 
 // Stars with layers
 for (let i = 0; i < 200; i++) {
@@ -954,11 +962,23 @@ function handleClick() {
     if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = !showLeaderboard; if (showLeaderboard) fetchLeaderboard(); return; }
     return;
   }
-  if (state === 'playing' && (waveState === 'playing' || waveState === 'boss')) fireInterceptor();
+  if (state === 'playing') {
+    // Check pause button
+    if (isInBtn(mouseX, mouseY, pauseBtnRect)) { paused = !paused; return; }
+    // If paused, only allow resume click (center button)
+    if (paused) {
+      const rbW = fz(180), rbH = fz(46);
+      const rbX = W/2 - rbW/2, rbY = H/2 - rbH/2 + fz(20);
+      if (isInBtn(mouseX, mouseY, {x: rbX, y: rbY, w: rbW, h: rbH})) { paused = false; }
+      return;
+    }
+    if (waveState === 'playing' || waveState === 'boss') fireInterceptor();
+  }
 }
 
-// Keyboard for name input
+// Keyboard for name input / pause
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && state === 'playing') { paused = !paused; e.preventDefault(); return; }
   if (state === 'nameinput') {
     if (e.key === 'Backspace') { nameInput = nameInput.slice(0, -1); e.preventDefault(); }
     else if (e.key === 'Enter' && nameInput.length > 0) {
@@ -1016,7 +1036,7 @@ function getWaveConfig(w) {
 
 function startGame() {
   state = 'playing'; score = 0; lives = 5; wave = 0;
-  combo = 0; comboTimer = 0; maxCombo = 0;
+  combo = 0; comboTimer = 0; maxCombo = 0; paused = false;
   missiles = []; interceptors = []; explosions = [];
   particles = []; floatingTexts = []; smokeTrails = [];
   boss = null; frame = 0; screenFlash = 0;
@@ -1151,6 +1171,7 @@ function shake(d) { shakeDuration = Math.max(shakeDuration, d); }
 function update() {
   frame++;
   if (state !== 'playing') return;
+  if (paused) return;
 
   if (comboTimer > 0) { comboTimer--; if (comboTimer <= 0) resetCombo(); }
   if (screenFlash > 0) screenFlash -= 0.04;
@@ -1810,6 +1831,27 @@ function draw() {
     ctx.fillRect(0, 0, W, H);
   }
 
+  // Pause overlay
+  if (state === 'playing' && paused) {
+    ctx.fillStyle = 'rgba(0,0,10,0.7)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${fz(32)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText(t('paused'), W/2, H/2 - fz(15));
+    // Resume button
+    const rbW = fz(180), rbH = fz(46);
+    const rbX = W/2 - rbW/2, rbY = H/2 + fz(5);
+    const rbGrad = ctx.createLinearGradient(0, rbY, 0, rbY + rbH);
+    rbGrad.addColorStop(0, '#00bb55');
+    rbGrad.addColorStop(1, '#008833');
+    ctx.fillStyle = rbGrad;
+    ctx.beginPath(); ctx.roundRect(rbX, rbY, rbW, rbH, 10); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${fz(18)}px Arial`;
+    ctx.fillText(t('resume'), W/2, rbY + rbH*0.65);
+  }
+
   if (state === 'menu') drawMenu();
   if (state === 'nameinput') drawNameInput();
   if (state === 'gameover') drawGameOver();
@@ -1882,51 +1924,49 @@ function drawBoss() {
 
 function drawHUD() {
   // Top HUD bar
+  const hudH = fz(38);
   ctx.fillStyle = 'rgba(0, 10, 20, 0.5)';
-  ctx.fillRect(0, 0, W, 52);
+  ctx.fillRect(0, 0, W, hudH);
   ctx.strokeStyle = 'rgba(100, 150, 200, 0.15)';
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, 52); ctx.lineTo(W, 52); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, hudH); ctx.lineTo(W, hudH); ctx.stroke();
 
   // Score (right)
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 22px Arial';
+  ctx.font = `bold ${fz(20)}px Arial`;
   ctx.textAlign = 'right';
-  ctx.fillText(`${score}`, W - 15, 30);
+  ctx.fillText(`${score}`, W - 10, hudH*0.55);
   ctx.fillStyle = 'rgba(150,180,220,0.6)';
-  ctx.font = '9px Arial';
-  ctx.fillText(t('score'), W - 15, 44);
-  // High score
-  ctx.fillStyle = 'rgba(120,140,170,0.5)';
-  ctx.font = '10px Arial';
-  ctx.fillText(`${t('best')}: ${highScore}`, W - 80, 30);
+  ctx.font = `${fz(8)}px Arial`;
+  ctx.fillText(t('score'), W - 10, hudH*0.85);
 
   // Wave + missiles remaining (center)
   ctx.fillStyle = '#6aacee';
-  ctx.font = 'bold 14px Arial';
+  ctx.font = `bold ${fz(13)}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText(`${t('wave')} ${wave}`, W/2, 20);
+  ctx.fillText(`${t('wave')} ${wave}`, W/2, hudH*0.45);
   const missilesInPlay = waveMissilesLeft + missiles.length;
   if ((waveState === 'playing' || waveState === 'boss') && missilesInPlay > 0) {
     ctx.fillStyle = 'rgba(150,180,220,0.5)';
-    ctx.font = '10px Arial';
-    ctx.fillText(`${missilesInPlay} ${t('missiles')}`, W/2, 35);
+    ctx.font = `${fz(9)}px Arial`;
+    ctx.fillText(`${missilesInPlay} ${t('missiles')}`, W/2, hudH*0.78);
   }
 
   // Lives (left)
   ctx.textAlign = 'left';
+  const heartSize = fz(14);
   for (let i = 0; i < 5; i++) {
     ctx.fillStyle = i < lives ? '#ee4444' : 'rgba(80,80,80,0.4)';
-    ctx.font = '16px Arial';
-    ctx.fillText('\u2665', 12 + i*22, 30);
+    ctx.font = `${heartSize}px Arial`;
+    ctx.fillText('\u2665', 8 + i*fz(18), hudH*0.6);
   }
 
   // Ammo bar (bottom strip)
-  const barH = 6, barMargin = 12;
+  const barH = fz(5), barMargin = 8;
   const barW = W - barMargin * 2;
-  const barY = H - barH - 6;
+  const barY = H - barH - 5;
   ctx.fillStyle = 'rgba(0, 10, 20, 0.4)';
-  ctx.fillRect(0, barY - 18, W, barH + 24);
+  ctx.fillRect(0, barY - fz(16), W, barH + fz(22));
   // Bar background
   ctx.fillStyle = 'rgba(40, 50, 60, 0.6)';
   ctx.fillRect(barMargin, barY, barW, barH);
@@ -1937,17 +1977,17 @@ function drawHUD() {
   ctx.fillRect(barMargin, barY, barW * ammoRatio, barH);
   // Ammo text
   ctx.fillStyle = ammoRatio > 0.2 ? 'rgba(200,220,255,0.7)' : '#ff4444';
-  ctx.font = 'bold 10px Arial';
+  ctx.font = `bold ${fz(9)}px Arial`;
   ctx.textAlign = 'left';
-  ctx.fillText(`${t('ammo')}: ${ammo}/${maxAmmo}`, barMargin, barY - 4);
+  ctx.fillText(`${t('ammo')}: ${ammo}/${maxAmmo}`, barMargin, barY - fz(3));
   // Out of ammo warning
   if (ammo <= 0 && state === 'playing') {
     const blink = Math.sin(frame * 0.15) > 0;
     if (blink) {
       ctx.fillStyle = '#ff3333';
-      ctx.font = 'bold 14px Arial';
+      ctx.font = `bold ${fz(13)}px Arial`;
       ctx.textAlign = 'center';
-      ctx.fillText(t('outOfAmmo'), W/2, barY - 14);
+      ctx.fillText(t('outOfAmmo'), W/2, barY - fz(12));
     }
   }
 
@@ -1955,11 +1995,11 @@ function drawHUD() {
   if (combo >= 2) {
     const pulse = 1 + Math.sin(frame*0.15)*0.04;
     ctx.save();
-    ctx.translate(W/2, 68);
+    ctx.translate(W/2, hudH + fz(16));
     ctx.scale(pulse, pulse);
     const mult = getMultiplier();
     ctx.fillStyle = combo >= 10 ? '#ff55ff' : combo >= 6 ? '#ffaa00' : '#ffdd00';
-    ctx.font = `bold ${combo >= 6 ? 18 : 14}px Arial`;
+    ctx.font = `bold ${fz(combo >= 6 ? 16 : 13)}px Arial`;
     ctx.textAlign = 'center';
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 4;
@@ -1967,18 +2007,30 @@ function drawHUD() {
     ctx.shadowBlur = 0;
     if (mult > 1) {
       ctx.fillStyle = '#fff';
-      ctx.font = 'bold 10px Arial';
-      ctx.fillText(`x${mult}`, 0, 13);
+      ctx.font = `bold ${fz(9)}px Arial`;
+      ctx.fillText(`x${mult}`, 0, fz(12));
     }
     ctx.restore();
     if (comboTimer > 0) {
-      const cbw = 60, cbh = 2, cbx = W/2 - cbw/2, cby = 78;
+      const cbw = fz(50), cbh = 2, cbx = W/2 - cbw/2, cby = hudH + fz(22);
       ctx.fillStyle = 'rgba(40,40,40,0.5)';
       ctx.fillRect(cbx, cby, cbw, cbh);
       ctx.fillStyle = combo >= 6 ? '#ffaa00' : '#ffdd00';
       ctx.fillRect(cbx, cby, cbw*(comboTimer/120), cbh);
     }
   }
+
+  // Pause button (top-right corner)
+  const pbS = fz(28);
+  const pbX = W - pbS - 6, pbY = 4;
+  pauseBtnRect = { x: pbX, y: pbY, w: pbS, h: pbS };
+  ctx.fillStyle = 'rgba(50,60,80,0.5)';
+  ctx.beginPath(); ctx.roundRect(pbX, pbY, pbS, pbS, 5); ctx.fill();
+  ctx.fillStyle = 'rgba(200,220,255,0.7)';
+  // Draw pause icon (two bars)
+  const barW2 = pbS * 0.18, barH2 = pbS * 0.5;
+  ctx.fillRect(pbX + pbS*0.28, pbY + pbS*0.25, barW2, barH2);
+  ctx.fillRect(pbX + pbS*0.54, pbY + pbS*0.25, barW2, barH2);
 
   // Crosshair
   if (waveState === 'playing' || waveState === 'boss') {
@@ -2048,7 +2100,7 @@ function drawBossIntro() {
 
 function drawLangToggle(baseY) {
   const langs = [{l:'he',label:'עב'},{l:'en',label:'EN'},{l:'de',label:'DE'}];
-  const bw = 36, bh = 24, gap = 6;
+  const bw = fz(36), bh = fz(24), gap = fz(6);
   const totalW = langs.length * bw + (langs.length-1) * gap;
   const sx = W/2 - totalW/2;
   langBtnRects = [];
@@ -2061,45 +2113,46 @@ function drawLangToggle(baseY) {
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.roundRect(bx, baseY, bw, bh, 5); ctx.stroke();
     ctx.fillStyle = active ? '#fff' : '#8899aa';
-    ctx.font = 'bold 11px Arial';
+    ctx.font = `bold ${fz(11)}px Arial`;
     ctx.textAlign = 'center';
-    ctx.fillText(lang.label, bx + bw/2, baseY + 16);
+    ctx.fillText(lang.label, bx + bw/2, baseY + bh*0.67);
     langBtnRects.push({x: bx, y: baseY, w: bw, h: bh, lang: lang.l});
   });
 }
 
 function drawLeaderboardTable(baseY) {
   ctx.fillStyle = '#6aacee';
-  ctx.font = 'bold 18px Arial';
+  ctx.font = `bold ${fz(18)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(t('leaderboard'), W/2, baseY);
   if (leaderboardLoading) {
     ctx.fillStyle = '#888';
-    ctx.font = '13px Arial';
-    ctx.fillText('...', W/2, baseY + 25);
+    ctx.font = `${fz(13)}px Arial`;
+    ctx.fillText('...', W/2, baseY + fz(25));
     return;
   }
   if (leaderboardData.length === 0) {
     ctx.fillStyle = '#666';
-    ctx.font = '12px Arial';
-    ctx.fillText('-', W/2, baseY + 25);
+    ctx.font = `${fz(12)}px Arial`;
+    ctx.fillText('-', W/2, baseY + fz(25));
     return;
   }
-  const colW = Math.min(W - 40, 320);
+  const colW = Math.min(W - 30, fz(320));
   const lx = W/2 - colW/2;
+  const rowH = fz(22);
   leaderboardData.forEach((entry, i) => {
-    const ey = baseY + 22 + i * 20;
+    const ey = baseY + rowH + i * rowH;
     const isTop = i < 3;
     ctx.fillStyle = isTop ? ['#ffdd00','#cccccc','#cc8844'][i] : 'rgba(180,200,220,0.5)';
-    ctx.font = isTop ? 'bold 12px Arial' : '12px Arial';
+    ctx.font = isTop ? `bold ${fz(13)}px Arial` : `${fz(13)}px Arial`;
     ctx.textAlign = 'left';
     ctx.fillText(`${i+1}.`, lx, ey);
     const flag = countryToFlag(entry.country);
-    ctx.fillText(`${flag} ${entry.name || '???'}`, lx + 24, ey);
+    ctx.fillText(`${flag} ${entry.name || '???'}`, lx + fz(24), ey);
     ctx.textAlign = 'right';
-    ctx.fillText(`${entry.score}`, lx + colW - 50, ey);
+    ctx.fillText(`${entry.score}`, lx + colW - fz(50), ey);
     ctx.fillStyle = 'rgba(130,160,200,0.4)';
-    ctx.font = '10px Arial';
+    ctx.font = `${fz(10)}px Arial`;
     ctx.fillText(`${t('wave')} ${entry.wave || '?'}`, lx + colW, ey);
   });
 }
@@ -2112,57 +2165,57 @@ function drawMenu() {
   drawLangToggle(12);
 
   if (showLeaderboard) {
-    drawLeaderboardTable(H * 0.15);
+    drawLeaderboardTable(H * 0.12);
     // Back hint
     ctx.fillStyle = 'rgba(150,180,220,0.4)';
-    ctx.font = '12px Arial';
+    ctx.font = `${fz(12)}px Arial`;
     ctx.textAlign = 'center';
     ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, H - 30);
     return;
   }
 
-  const menuCenterY = H * 0.28;
-  const titleY = menuCenterY - 40 + Math.sin(frame*0.025)*5;
-  const fs = isMobile ? 0.85 : 1;
+  const menuCenterY = H * 0.22;
+  const titleY = menuCenterY + Math.sin(frame*0.025)*5;
 
   // Title glow
   ctx.shadowColor = '#00cc66'; ctx.shadowBlur = 30;
   ctx.fillStyle = '#00dd66';
-  ctx.font = `bold ${Math.round(48*fs)}px Arial`;
+  ctx.font = `bold ${fz(42)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(t('title'), W/2, titleY);
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = '#6aacee';
-  ctx.font = `${Math.round(18*fs)}px Arial`;
-  ctx.fillText(t('subtitle'), W/2, titleY + 32*fs);
+  ctx.font = `${fz(16)}px Arial`;
+  ctx.fillText(t('subtitle'), W/2, titleY + fz(28));
 
   // Divider
   ctx.strokeStyle = 'rgba(100,200,255,0.2)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(W/2 - 90, titleY + 48*fs);
-  ctx.lineTo(W/2 + 90, titleY + 48*fs);
+  ctx.moveTo(W/2 - 90, titleY + fz(40));
+  ctx.lineTo(W/2 + 90, titleY + fz(40));
   ctx.stroke();
 
   ctx.fillStyle = '#bbb';
-  ctx.font = `${Math.round(12*fs)}px Arial`;
-  const iy = titleY + 65*fs;
+  ctx.font = `${fz(12)}px Arial`;
+  const lineH = fz(20);
+  const iy = titleY + fz(55);
   ctx.fillText(isMobile ? t('instrAim') : t('instrAimDesktop'), W/2, iy);
-  ctx.fillText(t('instrCombo'), W/2, iy+22);
-  ctx.fillText(t('instrBoss'), W/2, iy+44);
+  ctx.fillText(t('instrCombo'), W/2, iy + lineH);
+  ctx.fillText(t('instrBoss'), W/2, iy + lineH*2);
   ctx.fillStyle = '#ff8888';
-  ctx.fillText(t('instrWarn'), W/2, iy+66);
+  ctx.fillText(t('instrWarn'), W/2, iy + lineH*3);
 
   if (highScore > 0) {
     ctx.fillStyle = '#ffdd00';
-    ctx.font = `${Math.round(13*fs)}px Arial`;
-    ctx.fillText(`${t('best')}: ${highScore}`, W/2, iy+94);
+    ctx.font = `${fz(13)}px Arial`;
+    ctx.fillText(`${t('best')}: ${highScore}`, W/2, iy + lineH*4 + fz(8));
   }
 
   // Start button
-  const btnW = 220, btnH = 50;
-  const btnY = iy + 114;
+  const btnW = fz(200), btnH = fz(46);
+  const btnY = iy + lineH*4 + fz(28);
   startBtnRect = { x: W/2 - btnW/2, y: btnY, w: btnW, h: btnH };
   const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY+btnH);
   btnGrad.addColorStop(0, '#00bb55');
@@ -2173,12 +2226,12 @@ function drawMenu() {
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.roundRect(startBtnRect.x, btnY, btnW, btnH, 10); ctx.stroke();
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 22px Arial';
-  ctx.fillText(t('start'), W/2, btnY + 33);
+  ctx.font = `bold ${fz(20)}px Arial`;
+  ctx.fillText(t('start'), W/2, btnY + btnH*0.65);
 
   // Leaderboard button
-  const lbW = 180, lbH = 36;
-  const lbY = btnY + btnH + 14;
+  const lbW = fz(160), lbH = fz(34);
+  const lbY = btnY + btnH + fz(12);
   lbBtnRect = { x: W/2 - lbW/2, y: lbY, w: lbW, h: lbH };
   ctx.fillStyle = 'rgba(30,50,80,0.6)';
   ctx.beginPath(); ctx.roundRect(lbBtnRect.x, lbY, lbW, lbH, 8); ctx.fill();
@@ -2186,23 +2239,23 @@ function drawMenu() {
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.roundRect(lbBtnRect.x, lbY, lbW, lbH, 8); ctx.stroke();
   ctx.fillStyle = '#6aacee';
-  ctx.font = 'bold 15px Arial';
-  ctx.fillText(`\u{1F3C6} ${t('leaderboard')}`, W/2, lbY + 24);
+  ctx.font = `bold ${fz(14)}px Arial`;
+  ctx.fillText(`\u{1F3C6} ${t('leaderboard')}`, W/2, lbY + lbH*0.68);
 }
 
 function drawNameInput() {
   ctx.fillStyle = 'rgba(0,0,10,0.9)';
   ctx.fillRect(0,0,W,H);
 
-  const cy = H * 0.3;
+  const cy = H * 0.18;
 
   ctx.fillStyle = '#ffdd00';
-  ctx.font = 'bold 28px Arial';
+  ctx.font = `bold ${fz(28)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(`${score}`, W/2, cy);
   ctx.fillStyle = '#fff';
-  ctx.font = '14px Arial';
-  ctx.fillText(t('finalScore'), W/2, cy + 22);
+  ctx.font = `${fz(14)}px Arial`;
+  ctx.fillText(t('finalScore'), W/2, cy + fz(22));
 
   // Rating
   const ratings = t('rating');
@@ -2214,17 +2267,17 @@ function drawNameInput() {
   else if (score >= 20) ri = 2;
   else if (score >= 5) ri = 1;
   ctx.fillStyle = rColors[ri];
-  ctx.font = 'bold 18px Arial';
-  ctx.fillText(ratings[ri], W/2, cy + 52);
+  ctx.font = `bold ${fz(18)}px Arial`;
+  ctx.fillText(ratings[ri], W/2, cy + fz(50));
 
   // Name input prompt
   ctx.fillStyle = '#6aacee';
-  ctx.font = '14px Arial';
-  ctx.fillText(t('enterName'), W/2, cy + 90);
+  ctx.font = `${fz(14)}px Arial`;
+  ctx.fillText(t('enterName'), W/2, cy + fz(85));
 
   // Name input box
-  const boxW = 180, boxH = 40;
-  const boxX = W/2 - boxW/2, boxY = cy + 100;
+  const boxW = fz(180), boxH = fz(40);
+  const boxX = W/2 - boxW/2, boxY = cy + fz(95);
   ctx.fillStyle = 'rgba(20,30,50,0.8)';
   ctx.strokeStyle = '#4488cc';
   ctx.lineWidth = 2;
@@ -2232,20 +2285,20 @@ function drawNameInput() {
   ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, boxH, 6); ctx.stroke();
   // Name text
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 24px monospace';
+  ctx.font = `bold ${fz(24)}px monospace`;
   ctx.textAlign = 'center';
   const displayName = nameInput + (Math.sin(frame*0.1) > 0 ? '_' : ' ');
-  ctx.fillText(displayName, W/2, boxY + 28);
+  ctx.fillText(displayName, W/2, boxY + boxH*0.7);
   // char count
   ctx.fillStyle = 'rgba(150,180,220,0.4)';
-  ctx.font = '10px Arial';
-  ctx.fillText(`${nameInput.length}/6`, W/2 + boxW/2 - 10, boxY + boxH + 14);
+  ctx.font = `${fz(10)}px Arial`;
+  ctx.fillText(`${nameInput.length}/6`, W/2 + boxW/2 - fz(10), boxY + boxH + fz(14));
 
   // On mobile, show simple character buttons
   if (isMobile) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const cols = 9, charBtnSize = Math.min(36, (W - 40) / cols);
-    const kbY = boxY + boxH + 24;
+    const cols = 9, charBtnSize = Math.min(fz(36), (W - 30) / cols);
+    const kbY = boxY + boxH + fz(24);
     const kbX = W/2 - (cols * charBtnSize) / 2;
     for (let i = 0; i < chars.length; i++) {
       const col = i % cols, row = Math.floor(i / cols);
@@ -2253,28 +2306,28 @@ function drawNameInput() {
       ctx.fillStyle = 'rgba(40,50,70,0.7)';
       ctx.beginPath(); ctx.roundRect(cx+1, cy2+1, charBtnSize-2, charBtnSize-2, 4); ctx.fill();
       ctx.fillStyle = '#ddd';
-      ctx.font = 'bold 14px Arial';
+      ctx.font = `bold ${fz(14)}px Arial`;
       ctx.textAlign = 'center';
       ctx.fillText(chars[i], cx + charBtnSize/2, cy2 + charBtnSize/2 + 5);
     }
     // Backspace and Submit buttons
-    const actionY = kbY + Math.ceil(chars.length / cols) * charBtnSize + 8;
+    const actionY = kbY + Math.ceil(chars.length / cols) * charBtnSize + fz(8);
     // Backspace
     ctx.fillStyle = 'rgba(150,50,50,0.6)';
-    const bsW = 80, bsH = 34;
+    const bsW = fz(80), bsH = fz(36);
     ctx.beginPath(); ctx.roundRect(W/2 - bsW - 10, actionY, bsW, bsH, 6); ctx.fill();
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 14px Arial';
-    ctx.fillText('\u232B', W/2 - bsW/2 - 10, actionY + 22);
+    ctx.font = `bold ${fz(16)}px Arial`;
+    ctx.fillText('\u232B', W/2 - bsW/2 - 10, actionY + bsH*0.63);
     // Submit
-    const subBtnW = 80, subBtnH = 34;
+    const subBtnW = fz(80), subBtnH = fz(36);
     const subBtnX = W/2 + 10;
     submitBtnRect = { x: subBtnX, y: actionY, w: subBtnW, h: subBtnH };
     ctx.fillStyle = nameInput.length > 0 ? 'rgba(0,150,80,0.7)' : 'rgba(50,60,70,0.4)';
     ctx.beginPath(); ctx.roundRect(subBtnX, actionY, subBtnW, subBtnH, 6); ctx.fill();
     ctx.fillStyle = nameInput.length > 0 ? '#fff' : '#666';
-    ctx.font = 'bold 14px Arial';
-    ctx.fillText(t('submit'), subBtnX + subBtnW/2, actionY + 22);
+    ctx.font = `bold ${fz(14)}px Arial`;
+    ctx.fillText(t('submit'), subBtnX + subBtnW/2, actionY + subBtnH*0.63);
   } else {
     // Desktop: type with keyboard hint
     const subBtnW = 120, subBtnH = 38;
@@ -2298,53 +2351,53 @@ function drawGameOver() {
 
   // If leaderboard is open, show full-screen leaderboard with back button
   if (showLeaderboard) {
-    drawLeaderboardTable(H * 0.15);
+    drawLeaderboardTable(H * 0.12);
     // Play again button at bottom
-    const btnW = 180, btnH = 40;
-    const btnY = H - 90;
-    playAgainBtnRect = { x: W/2 - btnW/2, y: btnY, w: btnW, h: btnH };
-    const btnGrad = ctx.createLinearGradient(0, btnY, 0, btnY+btnH);
-    btnGrad.addColorStop(0, '#00bb55');
-    btnGrad.addColorStop(1, '#008833');
-    ctx.fillStyle = btnGrad;
-    ctx.beginPath(); ctx.roundRect(playAgainBtnRect.x, btnY, btnW, btnH, 10); ctx.fill();
+    const btnW = fz(170), btnH = fz(40);
+    const btnY2 = H - fz(80);
+    playAgainBtnRect = { x: W/2 - btnW/2, y: btnY2, w: btnW, h: btnH };
+    const btnGrad2 = ctx.createLinearGradient(0, btnY2, 0, btnY2+btnH);
+    btnGrad2.addColorStop(0, '#00bb55');
+    btnGrad2.addColorStop(1, '#008833');
+    ctx.fillStyle = btnGrad2;
+    ctx.beginPath(); ctx.roundRect(playAgainBtnRect.x, btnY2, btnW, btnH, 10); ctx.fill();
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 18px Arial';
+    ctx.font = `bold ${fz(17)}px Arial`;
     ctx.textAlign = 'center';
-    ctx.fillText(t('playAgain'), W/2, btnY + 26);
+    ctx.fillText(t('playAgain'), W/2, btnY2 + btnH*0.65);
     // Back hint
-    lbBtnRect = { x: 0, y: H - 40, w: W, h: 40 };
+    lbBtnRect = { x: 0, y: H - fz(35), w: W, h: fz(35) };
     ctx.fillStyle = 'rgba(150,180,220,0.4)';
-    ctx.font = '12px Arial';
-    ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, H - 18);
+    ctx.font = `${fz(12)}px Arial`;
+    ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, H - fz(10));
     return;
   }
 
   const goY = H * 0.12;
 
   ctx.fillStyle = '#ff4444';
-  ctx.font = 'bold 36px Arial';
+  ctx.font = `bold ${fz(34)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(t('gameOver'), W/2, goY);
 
-  // Score + best on same area, compact
+  // Score + best
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 32px Arial';
-  ctx.fillText(`${score}`, W/2, goY + 45);
+  ctx.font = `bold ${fz(30)}px Arial`;
+  ctx.fillText(`${score}`, W/2, goY + fz(42));
   if (score >= highScore && score > 0) {
     ctx.fillStyle = '#ffdd00';
-    ctx.font = 'bold 14px Arial';
-    ctx.fillText(t('newRecord'), W/2, goY + 65);
+    ctx.font = `bold ${fz(14)}px Arial`;
+    ctx.fillText(t('newRecord'), W/2, goY + fz(62));
   } else {
     ctx.fillStyle = '#888';
-    ctx.font = '12px Arial';
-    ctx.fillText(`${t('best')}: ${highScore}`, W/2, goY + 65);
+    ctx.font = `${fz(12)}px Arial`;
+    ctx.fillText(`${t('best')}: ${highScore}`, W/2, goY + fz(62));
   }
 
-  // Wave + combo in one line
+  // Wave + combo
   ctx.fillStyle = '#88bbff';
-  ctx.font = '13px Arial';
-  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, goY + 88);
+  ctx.font = `${fz(13)}px Arial`;
+  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, goY + fz(84));
 
   // Rating
   const ratings = t('rating');
@@ -2356,15 +2409,16 @@ function drawGameOver() {
   else if (score >= 20) ri = 2;
   else if (score >= 5) ri = 1;
   ctx.fillStyle = rColors[ri];
-  ctx.font = 'bold 18px Arial';
-  ctx.fillText(ratings[ri], W/2, goY + 115);
+  ctx.font = `bold ${fz(18)}px Arial`;
+  ctx.fillText(ratings[ri], W/2, goY + fz(110));
 
   // Buttons side by side
-  const totalW = 310, gap = 10;
-  const playW = 170, playH = 42;
-  const lbW2 = 130, lbH2 = 42;
-  const btnY = goY + 130;
-  const startX = W/2 - totalW/2;
+  const gap = fz(10);
+  const playW = fz(160), playH = fz(42);
+  const lbW2 = fz(55), lbH2 = fz(42);
+  const totalBtnW = playW + gap + lbW2;
+  const btnY = goY + fz(125);
+  const startX = W/2 - totalBtnW/2;
 
   // Play again
   playAgainBtnRect = { x: startX, y: btnY, w: playW, h: playH };
@@ -2374,8 +2428,8 @@ function drawGameOver() {
   ctx.fillStyle = btnGrad;
   ctx.beginPath(); ctx.roundRect(startX, btnY, playW, playH, 10); ctx.fill();
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 17px Arial';
-  ctx.fillText(t('playAgain'), startX + playW/2, btnY + 27);
+  ctx.font = `bold ${fz(17)}px Arial`;
+  ctx.fillText(t('playAgain'), startX + playW/2, btnY + playH*0.63);
 
   // Leaderboard button
   const lbX = startX + playW + gap;
@@ -2386,8 +2440,8 @@ function drawGameOver() {
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 10); ctx.stroke();
   ctx.fillStyle = '#6aacee';
-  ctx.font = 'bold 15px Arial';
-  ctx.fillText(`\u{1F3C6}`, lbX + lbW2/2, btnY + 27);
+  ctx.font = `bold ${fz(18)}px Arial`;
+  ctx.fillText(`\u{1F3C6}`, lbX + lbW2/2, btnY + lbH2*0.63);
 }
 
 // ==================== GAME LOOP ====================
