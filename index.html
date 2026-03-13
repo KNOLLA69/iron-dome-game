@@ -314,6 +314,11 @@ function getCurrentCity(wave) {
   return CITIES[cityIdx];
 }
 
+// Returns 0=day, 1=sunset, 2=night based on wave within city block
+function getTimeOfDay(wave) {
+  return (wave - 1) % 3; // 0=day, 1=sunset, 2=night
+}
+
 // ==================== FIREBASE LEADERBOARD ====================
 const FIREBASE_URL = 'https://iron-dome-game-c9bba-default-rtdb.asia-southeast1.firebasedatabase.app';
 let leaderboardData = [];
@@ -1827,79 +1832,201 @@ function update() {
 
 // ==================== DRAW ====================
 function draw() {
-  // Sky gradient - dusk/night atmosphere
+  // Sky gradient - varies by time of day
+  const timeOfDay = getTimeOfDay(wave);
   const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
-  skyGrad.addColorStop(0, '#05081a');
-  skyGrad.addColorStop(0.3, '#0c1230');
-  skyGrad.addColorStop(0.55, '#1a2545');
-  skyGrad.addColorStop(0.75, '#2a3555');
-  skyGrad.addColorStop(0.85, '#3a4060');
-  skyGrad.addColorStop(1, '#1a2035');
+  if (timeOfDay === 0) {
+    // Day - light blue sky
+    skyGrad.addColorStop(0, '#4a8fcc');
+    skyGrad.addColorStop(0.2, '#6aafdd');
+    skyGrad.addColorStop(0.4, '#8ecae6');
+    skyGrad.addColorStop(0.6, '#a8d8ea');
+    skyGrad.addColorStop(0.8, '#c0e0f0');
+    skyGrad.addColorStop(1, '#d0e8f4');
+  } else if (timeOfDay === 1) {
+    // Sunset - orange/pink/purple gradient
+    skyGrad.addColorStop(0, '#1a1040');
+    skyGrad.addColorStop(0.2, '#2d1b4e');
+    skyGrad.addColorStop(0.4, '#6b2d5b');
+    skyGrad.addColorStop(0.6, '#c44e52');
+    skyGrad.addColorStop(0.8, '#e87f3a');
+    skyGrad.addColorStop(1, '#f0a030');
+  } else {
+    // Night - dark palette
+    skyGrad.addColorStop(0, '#05081a');
+    skyGrad.addColorStop(0.3, '#0c1230');
+    skyGrad.addColorStop(0.55, '#1a2545');
+    skyGrad.addColorStop(0.75, '#2a3555');
+    skyGrad.addColorStop(0.85, '#3a4060');
+    skyGrad.addColorStop(1, '#1a2035');
+  }
   ctx.fillStyle = skyGrad;
   ctx.fillRect(0, 0, W, H);
 
   ctx.save();
   ctx.translate(shakeX, shakeY);
 
-  // Stars
-  stars.forEach(s => {
-    s.twinkle += s.speed;
-    const alpha = s.brightness * (0.4 + Math.sin(s.twinkle) * 0.3);
-    ctx.fillStyle = `rgba(255,255,240,${alpha})`;
+  // Stars - visibility varies by time of day
+  const starAlphaFactor = timeOfDay === 0 ? 0 : timeOfDay === 1 ? 0.3 : 1.0;
+  if (starAlphaFactor > 0) {
+    stars.forEach(s => {
+      s.twinkle += s.speed;
+      const alpha = s.brightness * (0.4 + Math.sin(s.twinkle) * 0.3) * starAlphaFactor;
+      ctx.fillStyle = `rgba(255,255,240,${alpha})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+
+  // Sun or Moon depending on time of day
+  if (timeOfDay === 0) {
+    // Day - bright yellow/white sun high in sky
+    const sunX = W - 60 * scaleX - 60, sunY = 80;
+    // Sun glow (outer)
+    const sunGlow = ctx.createRadialGradient(sunX, sunY, 20, sunX, sunY, 80);
+    sunGlow.addColorStop(0, 'rgba(255, 255, 200, 0.3)');
+    sunGlow.addColorStop(0.5, 'rgba(255, 240, 150, 0.1)');
+    sunGlow.addColorStop(1, 'rgba(255, 220, 100, 0)');
+    ctx.fillStyle = sunGlow;
     ctx.beginPath();
-    ctx.arc(s.x, s.y, s.size, 0, Math.PI*2);
+    ctx.arc(sunX, sunY, 80, 0, Math.PI*2);
     ctx.fill();
-  });
+    // Sun body
+    ctx.fillStyle = 'rgba(255, 250, 220, 0.95)';
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 28, 0, Math.PI*2);
+    ctx.fill();
+    // Sun bright core
+    ctx.fillStyle = 'rgba(255, 255, 240, 1)';
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 18, 0, Math.PI*2);
+    ctx.fill();
+  } else if (timeOfDay === 1) {
+    // Sunset - large orange/red sun near horizon
+    const sunX = W - 60 * scaleX - 80, sunY = GROUND_Y - 50;
+    // Sunset glow (outer)
+    const sunsetGlow = ctx.createRadialGradient(sunX, sunY, 25, sunX, sunY, 100);
+    sunsetGlow.addColorStop(0, 'rgba(255, 140, 50, 0.4)');
+    sunsetGlow.addColorStop(0.5, 'rgba(255, 100, 50, 0.15)');
+    sunsetGlow.addColorStop(1, 'rgba(255, 60, 30, 0)');
+    ctx.fillStyle = sunsetGlow;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 100, 0, Math.PI*2);
+    ctx.fill();
+    // Sun body - large orange
+    ctx.fillStyle = 'rgba(255, 120, 40, 0.9)';
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 35, 0, Math.PI*2);
+    ctx.fill();
+    // Sun bright core
+    ctx.fillStyle = 'rgba(255, 180, 80, 0.7)';
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 22, 0, Math.PI*2);
+    ctx.fill();
+  } else {
+    // Night - moon with craters
+    const moonX = W - 60 * scaleX - 60, moonY = 80;
+    ctx.fillStyle = 'rgba(240, 240, 220, 0.9)';
+    ctx.beginPath();
+    ctx.arc(moonX, moonY, 25, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,230,0.05)';
+    ctx.beginPath();
+    ctx.arc(moonX, moonY, 45, 0, Math.PI*2);
+    ctx.fill();
+    // Moon craters
+    ctx.fillStyle = 'rgba(200,200,190,0.3)';
+    ctx.beginPath(); ctx.arc(moonX-8, moonY-5, 4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(moonX+8, moonY+5, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(moonX-2, moonY+10, 2.5, 0, Math.PI*2); ctx.fill();
+  }
 
-  // Moon
-  const moonX = W - 60 * scaleX - 60, moonY = 80;
-  ctx.fillStyle = 'rgba(240, 240, 220, 0.9)';
-  ctx.beginPath();
-  ctx.arc(moonX, moonY, 25, 0, Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,230,0.05)';
-  ctx.beginPath();
-  ctx.arc(moonX, moonY, 45, 0, Math.PI*2);
-  ctx.fill();
-  // Moon craters
-  ctx.fillStyle = 'rgba(200,200,190,0.3)';
-  ctx.beginPath(); ctx.arc(moonX-8, moonY-5, 4, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(moonX+8, moonY+5, 3, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(moonX-2, moonY+10, 2.5, 0, Math.PI*2); ctx.fill();
-
-  // Mediterranean sea (horizon)
+  // Mediterranean sea (horizon) - varies by time of day
   const seaGrad = ctx.createLinearGradient(0, GROUND_Y - 2, 0, H);
-  seaGrad.addColorStop(0, '#1a2a40');
-  seaGrad.addColorStop(0.3, '#15253a');
-  seaGrad.addColorStop(1, '#0d1a2a');
+  if (timeOfDay === 0) {
+    // Day - lighter Mediterranean blue
+    seaGrad.addColorStop(0, '#3a6a90');
+    seaGrad.addColorStop(0.3, '#2d5a80');
+    seaGrad.addColorStop(1, '#1d4a6a');
+  } else if (timeOfDay === 1) {
+    // Sunset - orange-tinted sea
+    seaGrad.addColorStop(0, '#4a3a50');
+    seaGrad.addColorStop(0.3, '#3a2a45');
+    seaGrad.addColorStop(1, '#2a1a35');
+  } else {
+    // Night - dark sea
+    seaGrad.addColorStop(0, '#1a2a40');
+    seaGrad.addColorStop(0.3, '#15253a');
+    seaGrad.addColorStop(1, '#0d1a2a');
+  }
   ctx.fillStyle = seaGrad;
   ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
 
-  // Sea reflections (city lights on water)
-  for (let x = 0; x < W; x += 3) {
-    const brightness = Math.random();
-    if (brightness > 0.7) {
-      const seaY = GROUND_Y + 5 + Math.random() * (H - GROUND_Y - 10);
-      ctx.fillStyle = `rgba(${200+Math.random()*55}, ${180+Math.random()*55}, ${100+Math.random()*100}, ${0.02 + Math.random()*0.04})`;
-      ctx.fillRect(x, seaY, 2 + Math.random()*3, 1);
+  // Sea reflections - vary by time of day
+  if (timeOfDay === 0) {
+    // Day - bright sun sparkles on water
+    for (let x = 0; x < W; x += 3) {
+      const brightness = Math.random();
+      if (brightness > 0.7) {
+        const seaY = GROUND_Y + 5 + Math.random() * (H - GROUND_Y - 10);
+        ctx.fillStyle = `rgba(${220+Math.random()*35}, ${230+Math.random()*25}, ${240+Math.random()*15}, ${0.04 + Math.random()*0.06})`;
+        ctx.fillRect(x, seaY, 2 + Math.random()*3, 1);
+      }
+    }
+  } else if (timeOfDay === 1) {
+    // Sunset - warm orange reflections
+    for (let x = 0; x < W; x += 3) {
+      const brightness = Math.random();
+      if (brightness > 0.7) {
+        const seaY = GROUND_Y + 5 + Math.random() * (H - GROUND_Y - 10);
+        ctx.fillStyle = `rgba(${220+Math.random()*35}, ${140+Math.random()*60}, ${60+Math.random()*40}, ${0.03 + Math.random()*0.05})`;
+        ctx.fillRect(x, seaY, 2 + Math.random()*3, 1);
+      }
+    }
+  } else {
+    // Night - city light reflections on water
+    for (let x = 0; x < W; x += 3) {
+      const brightness = Math.random();
+      if (brightness > 0.7) {
+        const seaY = GROUND_Y + 5 + Math.random() * (H - GROUND_Y - 10);
+        ctx.fillStyle = `rgba(${200+Math.random()*55}, ${180+Math.random()*55}, ${100+Math.random()*100}, ${0.02 + Math.random()*0.04})`;
+        ctx.fillRect(x, seaY, 2 + Math.random()*3, 1);
+      }
     }
   }
   // Animated water shimmer
   for (let i = 0; i < 30; i++) {
     const sx = (i * 37 + frame * 0.3) % W;
     const sy = GROUND_Y + 8 + Math.sin(frame * 0.02 + i) * 3 + (i % 5) * 7;
-    ctx.fillStyle = `rgba(150, 200, 255, ${0.02 + Math.sin(frame*0.05 + i)*0.015})`;
+    const shimmerR = timeOfDay === 0 ? 180 : timeOfDay === 1 ? 200 : 150;
+    const shimmerG = timeOfDay === 0 ? 220 : timeOfDay === 1 ? 150 : 200;
+    const shimmerB = timeOfDay === 0 ? 255 : timeOfDay === 1 ? 100 : 255;
+    ctx.fillStyle = `rgba(${shimmerR}, ${shimmerG}, ${shimmerB}, ${0.02 + Math.sin(frame*0.05 + i)*0.015})`;
     ctx.fillRect(sx, sy, 8 + Math.sin(i)*3, 1);
   }
 
   // City skyline (pre-rendered)
   ctx.drawImage(cityCanvas, 0, 0);
 
-  // City glow (light pollution)
+  // City glow (light pollution) - varies by time of day
   const glowGrad = ctx.createLinearGradient(0, GROUND_Y - 200, 0, GROUND_Y);
-  glowGrad.addColorStop(0, 'rgba(255, 200, 120, 0)');
-  glowGrad.addColorStop(0.7, 'rgba(255, 180, 100, 0.02)');
-  glowGrad.addColorStop(1, 'rgba(255, 160, 80, 0.06)');
+  if (timeOfDay === 0) {
+    // Day - minimal glow, city well lit by sun
+    glowGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    glowGrad.addColorStop(0.7, 'rgba(255, 255, 240, 0.005)');
+    glowGrad.addColorStop(1, 'rgba(255, 250, 220, 0.01)');
+  } else if (timeOfDay === 1) {
+    // Sunset - warm orange glow
+    glowGrad.addColorStop(0, 'rgba(255, 160, 60, 0)');
+    glowGrad.addColorStop(0.7, 'rgba(255, 140, 50, 0.03)');
+    glowGrad.addColorStop(1, 'rgba(255, 120, 40, 0.08)');
+  } else {
+    // Night - strong warm glow (original)
+    glowGrad.addColorStop(0, 'rgba(255, 200, 120, 0)');
+    glowGrad.addColorStop(0.7, 'rgba(255, 180, 100, 0.02)');
+    glowGrad.addColorStop(1, 'rgba(255, 160, 80, 0.06)');
+  }
   ctx.fillStyle = glowGrad;
   ctx.fillRect(0, GROUND_Y - 200, W, 200);
 
