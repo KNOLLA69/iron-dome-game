@@ -73,6 +73,8 @@ const TEXTS = {
     shareText: 'שחקתי כיפת ברזל - הגנה על ישראל! 🇮🇱',
     terms: 'תנאי שימוש', privacy: 'מדיניות פרטיות', disclaimer: 'הצהרה',
     droneAlert: 'מל"ט!', ballisticAlert: 'טיל בליסטי!',
+    rocketAlert: 'רקטה!', decoyAlert: 'נורית הטעיה!',
+    cityDestroyed: 'נחרבה',
     powerShield: 'מגן!', powerRapid: 'אש מהירה!', powerEMP: 'EMP!'
   },
   en: {
@@ -102,6 +104,8 @@ const TEXTS = {
     shareText: 'I played Iron Dome - Defend Israel! 🇮🇱',
     terms: 'Terms & Conditions', privacy: 'Privacy Policy', disclaimer: 'Disclaimer',
     droneAlert: 'UAV!', ballisticAlert: 'Ballistic!',
+    rocketAlert: 'Rocket!', decoyAlert: 'Decoy Flare!',
+    cityDestroyed: 'was destroyed',
     powerShield: 'Shield!', powerRapid: 'Rapid Fire!', powerEMP: 'EMP!'
   },
   de: {
@@ -131,6 +135,8 @@ const TEXTS = {
     shareText: 'Ich spielte Iron Dome - Israel verteidigen! 🇮🇱',
     terms: 'AGB', privacy: 'Datenschutz', disclaimer: 'Haftungsausschluss',
     droneAlert: 'Drohne!', ballisticAlert: 'Ballistisch!',
+    rocketAlert: 'Rakete!', decoyAlert: 'Täuschkörper!',
+    cityDestroyed: 'wurde zerstört',
     powerShield: 'Schild!', powerRapid: 'Schnellfeuer!', powerEMP: 'EMP!'
   }
 };
@@ -1240,6 +1246,10 @@ let showLeaderboard = false;
 // Pause
 let paused = false;
 let pauseBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+// Tutorial & enemy callout system
+let tutorialSeen = !!localStorage.getItem('tutorialSeen');
+let seenTypes = {};
+let enemyAlert = null; // { text, color, timer }
 
 // Stars with layers
 for (let i = 0; i < 200; i++) {
@@ -1765,6 +1775,7 @@ function startGame() {
   powerUps = []; activePower = null; activePowerTimer = 0;
   cityDamage = 0; killFeed = [];
   frame = 0; screenFlash = 0;
+  seenTypes = {}; enemyAlert = null;
   currentCityIdx = 0; cityIntroTimer = 0;
   generateCityCanvas(CITIES[0]);
   incrementPlayCount();
@@ -1833,6 +1844,7 @@ function fireInterceptor() {
     return;
   }
   if (!unlimitedAmmo) ammo--;
+  if (!tutorialSeen) { tutorialSeen = true; localStorage.setItem('tutorialSeen', '1'); }
   const speed = 10;
   const dx = mouseX - batteryX, dy = mouseY - batteryY;
   const dist = Math.sqrt(dx*dx + dy*dy);
@@ -1898,6 +1910,13 @@ function spawnMissile(forceType) {
     flashTimer: 0
   };
   missiles.push(m);
+  // Enemy type first-appearance callout
+  if (!seenTypes[type]) {
+    seenTypes[type] = true;
+    const alertKeys = { rocket: 'rocketAlert', drone: 'droneAlert', ballistic: 'ballisticAlert', decoy: 'decoyAlert' };
+    const alertColors = { rocket: '#ff8844', drone: '#5599ee', ballistic: '#ff4444', decoy: '#ffcc44' };
+    enemyAlert = { text: t(alertKeys[type]), color: alertColors[type], timer: 180 };
+  }
   // Decoys spawn in groups of 3-5
   if (type === 'decoy' && !forceType) {
     const extra = 2 + Math.floor(Math.random() * 3);
@@ -2029,6 +2048,7 @@ function update() {
   if (paused) return;
 
   if (comboTimer > 0) { comboTimer--; if (comboTimer <= 0) resetCombo(); }
+  if (enemyAlert && enemyAlert.timer > 0) enemyAlert.timer--;
   if (screenFlash > 0) screenFlash -= 0.04;
 
   // Siren intro at game start
@@ -3453,6 +3473,23 @@ function draw() {
   });
   ctx.globalAlpha = 1;
 
+  // Enemy type first-appearance alert
+  if (enemyAlert && enemyAlert.timer > 0) {
+    const ea = enemyAlert;
+    const eaAlpha = Math.min(1, ea.timer / 30); // fade out in last 0.5s
+    ctx.save();
+    ctx.globalAlpha = eaAlpha;
+    ctx.fillStyle = ea.color;
+    ctx.font = `bold ${fz(20)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+    ctx.shadowBlur = 10;
+    ctx.fillText(ea.text, W/2, H * 0.28);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
   // Airplane with banner
   if (airplane) {
     const ax = airplane.x, ay = airplane.y;
@@ -3661,6 +3698,16 @@ function drawSirenIntro() {
   ctx.font = '16px Arial';
   ctx.fillText(t('sirenPrepare'), W/2, H/2 + 18);
 
+  // First-play controls tutorial
+  if (!tutorialSeen) {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = `${fz(14)}px Arial`;
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 6;
+    ctx.fillText(isMobile ? t('instrAim') : t('instrAimDesktop'), W/2, H/2 + 55);
+    ctx.shadowBlur = 0;
+  }
+
   ctx.globalAlpha = 1;
 }
 
@@ -3806,7 +3853,8 @@ function drawHUD() {
   ctx.font = `bold ${fz(13)}px Arial`;
   ctx.textAlign = 'center';
   const cityName = CITIES[currentCityIdx] ? (CITIES[currentCityIdx].name[currentLang] || CITIES[currentCityIdx].name.en) : '';
-  ctx.fillText(`${t('wave')} ${wave} - ${cityName}`, W/2, hudH*0.42);
+  const displayWave = waveState === 'siren_intro' ? wave + 1 : wave;
+  ctx.fillText(`${t('wave')} ${displayWave} - ${cityName}`, W/2, hudH*0.42);
   const missilesInPlay = waveMissilesLeft + missiles.length;
   if (waveState === 'playing' && missilesInPlay > 0) {
     ctx.fillStyle = 'rgba(150,180,220,0.5)';
@@ -3832,48 +3880,50 @@ function drawHUD() {
   ctx.textAlign = 'right';
   ctx.fillText(t('score'), scoreX, hudH*0.88);
 
-  // Ammo bar (bottom strip)
-  const barH2 = fz(5), barMargin = 8;
-  const barW2 = W - barMargin * 2;
-  const barY = H - barH2 - 5;
-  ctx.fillStyle = 'rgba(0, 10, 20, 0.4)';
-  ctx.fillRect(0, barY - fz(16), W, barH2 + fz(22));
-  // Bar background
-  ctx.fillStyle = 'rgba(40, 50, 60, 0.6)';
-  ctx.fillRect(barMargin, barY, barW2, barH2);
-  // Bar fill with gradient
-  const ammoRatio = maxAmmo > 0 ? ammo / maxAmmo : 0;
-  if (ammoRatio > 0) {
-    const ammoGrad = ctx.createLinearGradient(barMargin, barY, barMargin, barY + barH2);
-    if (ammoRatio > 0.5) {
-      ammoGrad.addColorStop(0, '#22dd77');
-      ammoGrad.addColorStop(1, '#00aa55');
-    } else if (ammoRatio > 0.2) {
-      ammoGrad.addColorStop(0, '#ffcc33');
-      ammoGrad.addColorStop(1, '#dd8800');
-    } else {
-      ammoGrad.addColorStop(0, '#ff5555');
-      ammoGrad.addColorStop(1, '#cc2222');
+  // Ammo bar (bottom strip) — hide during siren/city intro
+  if (sirenTimer <= 0 && cityIntroTimer <= 0) {
+    const barH2 = fz(5), barMargin = 8;
+    const barW2 = W - barMargin * 2;
+    const barY = H - barH2 - 5;
+    ctx.fillStyle = 'rgba(0, 10, 20, 0.4)';
+    ctx.fillRect(0, barY - fz(16), W, barH2 + fz(22));
+    // Bar background
+    ctx.fillStyle = 'rgba(40, 50, 60, 0.6)';
+    ctx.fillRect(barMargin, barY, barW2, barH2);
+    // Bar fill with gradient
+    const ammoRatio = maxAmmo > 0 ? ammo / maxAmmo : 0;
+    if (ammoRatio > 0) {
+      const ammoGrad = ctx.createLinearGradient(barMargin, barY, barMargin, barY + barH2);
+      if (ammoRatio > 0.5) {
+        ammoGrad.addColorStop(0, '#22dd77');
+        ammoGrad.addColorStop(1, '#00aa55');
+      } else if (ammoRatio > 0.2) {
+        ammoGrad.addColorStop(0, '#ffcc33');
+        ammoGrad.addColorStop(1, '#dd8800');
+      } else {
+        ammoGrad.addColorStop(0, '#ff5555');
+        ammoGrad.addColorStop(1, '#cc2222');
+      }
+      ctx.fillStyle = ammoGrad;
+      ctx.fillRect(barMargin, barY, barW2 * ammoRatio, barH2);
+      // Ammo bar shine
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fillRect(barMargin, barY, barW2 * ammoRatio, barH2 / 2);
     }
-    ctx.fillStyle = ammoGrad;
-    ctx.fillRect(barMargin, barY, barW2 * ammoRatio, barH2);
-    // Ammo bar shine
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.fillRect(barMargin, barY, barW2 * ammoRatio, barH2 / 2);
-  }
-  // Ammo text
-  ctx.fillStyle = ammoRatio > 0.2 ? 'rgba(200,220,255,0.7)' : '#ff4444';
-  ctx.font = `bold ${fz(9)}px Arial`;
-  ctx.textAlign = 'left';
-  ctx.fillText(`${t('ammo')}: ${ammo}/${maxAmmo}`, barMargin, barY - fz(3));
-  // Out of ammo warning
-  if (ammo <= 0 && state === 'playing') {
-    const blink = Math.sin(frame * 0.15) > 0;
-    if (blink) {
-      ctx.fillStyle = '#ff3333';
-      ctx.font = `bold ${fz(13)}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.fillText(t('outOfAmmo'), W/2, barY - fz(12));
+    // Ammo text
+    ctx.fillStyle = ammoRatio > 0.2 ? 'rgba(200,220,255,0.7)' : '#ff4444';
+    ctx.font = `bold ${fz(9)}px Arial`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`${t('ammo')}: ${ammo}/${maxAmmo}`, barMargin, barY - fz(3));
+    // Out of ammo warning
+    if (ammo <= 0 && state === 'playing') {
+      const blink = Math.sin(frame * 0.15) > 0;
+      if (blink) {
+        ctx.fillStyle = '#ff3333';
+        ctx.font = `bold ${fz(13)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText(t('outOfAmmo'), W/2, barY - fz(12));
+      }
     }
   }
 
@@ -4647,6 +4697,21 @@ function drawGameOver() {
   ctx.font = `${fz(13)}px Arial`;
   ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, goY + fz(84));
 
+  // City destroyed message
+  const destroyedCity = CITIES[currentCityIdx] ? (CITIES[currentCityIdx].name[currentLang] || CITIES[currentCityIdx].name.en) : '';
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,50,50,0.4)';
+  ctx.shadowBlur = 8;
+  ctx.fillStyle = '#ff6666';
+  ctx.font = `bold ${fz(14)}px Arial`;
+  if (currentLang === 'he') {
+    ctx.fillText(`${destroyedCity} ${t('cityDestroyed')}`, W/2, goY + fz(100));
+  } else {
+    ctx.fillText(`${destroyedCity} ${t('cityDestroyed')}`, W/2, goY + fz(100));
+  }
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
   // Rating
   const ratings = t('rating');
   const rColors = ['#888','#aaa','#00cc66','#00ddff','#ffaa00','#ffdd00'];
@@ -4658,14 +4723,14 @@ function drawGameOver() {
   else if (score >= 5) ri = 1;
   ctx.fillStyle = rColors[ri];
   ctx.font = `bold ${fz(18)}px Arial`;
-  ctx.fillText(ratings[ri], W/2, goY + fz(110));
+  ctx.fillText(ratings[ri], W/2, goY + fz(126));
 
   // Buttons side by side
   const gap = fz(10);
   const playW = fz(160), playH = fz(42);
   const lbW2 = fz(55), lbH2 = fz(42);
   const totalBtnW = playW + gap + lbW2;
-  const btnY = goY + fz(125);
+  const btnY = goY + fz(141);
   const startX = W/2 - totalBtnW/2;
 
   // Play again with glow
