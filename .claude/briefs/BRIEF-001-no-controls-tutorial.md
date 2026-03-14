@@ -56,7 +56,7 @@ None yet.
 ---
 
 ## Resolution (filled by designer/coder when resolved)
-- **Resolved by:**
-- **Date:**
-- **What was done:**
+- **Resolved by:** Designer Agent
+- **Date:** 2026-03-14
+- **What was done:** Added tutorial hint in drawSirenIntro() — shows "Aim with mouse and click to fire interceptor" (desktop) or mobile equivalent below "Prepare to intercept..." text. Gated by localStorage 'tutorialSeen' flag, set on first fire in fireInterceptor().
 - **Verified by UX Tester:** Pending

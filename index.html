@@ -1752,17 +1752,17 @@ document.addEventListener('dblclick', (e) => e.preventDefault());
 // Enemy type weights per wave range
 function getEnemyWeights(w) {
   if (w <= 3) return { rocket: 1.0, drone: 0, ballistic: 0, decoy: 0 };
-  if (w <= 6) return { rocket: 0.65, drone: 0.25, ballistic: 0.1, decoy: 0 };
-  if (w <= 9) return { rocket: 0.45, drone: 0.25, ballistic: 0.2, decoy: 0.1 };
-  if (w <= 12) return { rocket: 0.35, drone: 0.25, ballistic: 0.2, decoy: 0.2 };
-  return { rocket: 0.3, drone: 0.25, ballistic: 0.25, decoy: 0.2 };
+  if (w <= 6) return { rocket: 0.70, drone: 0.20, ballistic: 0.10, decoy: 0 };
+  if (w <= 9) return { rocket: 0.50, drone: 0.20, ballistic: 0.20, decoy: 0.10 };
+  if (w <= 12) return { rocket: 0.35, drone: 0.25, ballistic: 0.20, decoy: 0.20 };
+  return { rocket: 0.30, drone: 0.25, ballistic: 0.25, decoy: 0.20 };
 }
 
 function getWaveConfig(w) {
   return {
-    missiles: 10 + w * 5,
-    missileSpeed: 1.1 + w * 0.1,
-    missileInterval: Math.max(30, 90 - w * 5),
+    missiles: 8 + w * 3,
+    missileSpeed: 1.0 + w * 0.08,
+    missileInterval: Math.max(35, 100 - w * 4),
     enemyWeights: getEnemyWeights(w),
   };
 }
@@ -1884,7 +1884,7 @@ function pickEnemyType() {
 // Enemy type configs
 const ENEMY_TYPES = {
   rocket:    { speedMult: 1.0, hp: 1, hitbox: 28, points: 1, color: '#888' },
-  drone:     { speedMult: 1.4, hp: 1, hitbox: 22, points: 2, color: '#5588bb' },
+  drone:     { speedMult: 1.1, hp: 1, hitbox: 22, points: 2, color: '#5588bb' },
   ballistic: { speedMult: 0.7, hp: 3, hitbox: 35, points: 5, color: '#cc4444' },
   decoy:     { speedMult: 2.0, hp: 1, hitbox: 15, points: 1, color: '#ffaa44' },
 };

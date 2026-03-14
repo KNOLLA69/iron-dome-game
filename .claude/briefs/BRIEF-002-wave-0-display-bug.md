@@ -47,7 +47,7 @@ None.
 ---
 
 ## Resolution (filled by designer/coder when resolved)
-- **Resolved by:**
-- **Date:**
-- **What was done:**
+- **Resolved by:** Designer Agent
+- **Date:** 2026-03-14
+- **What was done:** In drawHUD(), added `displayWave = waveState === 'siren_intro' ? wave + 1 : wave` so HUD shows "Wave 1" during siren intro instead of "Wave 0".
 - **Verified by UX Tester:** Pending

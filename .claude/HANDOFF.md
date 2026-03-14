@@ -6,23 +6,38 @@
 
 ## Latest Session
 
-- **Agent:** Designer
+- **Agent:** Designer (implementing UX fixes)
 - **Date:** 2026-03-14
-- **Summary:** Realism & sharpness overhaul per user request. Added HiDPI canvas scaling (devicePixelRatio) for crisp rendering on retina displays. Redesigned drone from quad-rotor to Shahed-136 delta-wing UAV with swept wings, narrow fuselage, V-tail, and pusher propeller. Verified rocket body (Qassam/Grad-style), ballistic missile (Iranian Fajr/Fateh-style), Tamir interceptor (seeker dome + canards + tail fins), and Iron Dome battery (truck cab + phased-array radar) were already upgraded from prior session. All changes verified across day/sunset/night time states with zero console errors.
+- **Summary:** Implemented all 5 UX Round 1 fixes from BRIEF-006 (consolidated). All fixes verified visually via preview server.
 - **Key Changes:**
-  1. **HiDPI canvas scaling** — Canvas buffer now multiplied by `devicePixelRatio`. Main canvas, cityCanvas, and batteryCanvas all scale properly. All text, gradients, and lines render at native display resolution (2x on retina). Biggest single sharpness improvement.
-  2. **Drone redesign (Shahed-136)** — Replaced quad-rotor with delta-wing kamikaze drone: swept delta wings with gradient + panel lines, narrow cylindrical fuselage, dark seeker nose cone, V-tail stabilizers, spinning rear pusher propeller, warhead marking band. Olive-green military color scheme.
+  1. **Fix 1 — Controls tutorial (BRIEF-001, P1):** During siren intro, shows "Aim with mouse and click to fire interceptor" (desktop) or mobile equivalent. Gated by localStorage `tutorialSeen` flag, set on first fire.
+  2. **Fix 2 — Wave 0 display bug (BRIEF-002, P2):** HUD now shows `wave + 1` during siren_intro so it reads "Wave 1" not "Wave 0".
+  3. **Fix 3 — Hidden ammo during siren (BRIEF-003, P2):** Entire ammo bar + "Out of Interceptors" warning wrapped in `if (sirenTimer <= 0 && cityIntroTimer <= 0)`.
+  4. **Fix 4 — City destroyed message (BRIEF-004, P2):** Game over screen now shows "[CityName] was destroyed" in red below wave/combo stats.
+  5. **Fix 5 — Enemy type callouts (BRIEF-005, P2):** First-spawn callout per enemy type with color-coded text (rocket=orange, drone=blue, ballistic=red, decoy=yellow), fades over 3s.
+- **i18n strings added:** `rocketAlert`, `decoyAlert`, `cityDestroyed` in he/en/de.
+- **State variables added:** `tutorialSeen`, `seenTypes`, `enemyAlert`.
 - **Files Modified:**
-  - `index.html` — HiDPI scaling (canvas setup, off-screen canvases, drawImage calls), drone rendering redesign
-  - `.claude/visual-audit.md` — Already updated with realism pass ratings
-  - `.claude/decisions-log.md` — Already updated with DECISION-033 (HiDPI) + DECISION-034 (drone redesign)
+  - `index.html` — All 5 fixes across TEXTS, state vars, startGame, fireInterceptor, spawnMissile, drawSirenIntro, drawHUD, drawGameOver, draw, update
+  - `.claude/briefs/BRIEF-001 through BRIEF-006` — All marked RESOLVED
   - `.claude/HANDOFF.md` — This file
 - **Blocked On:** Nothing
-- **NOT committed/pushed** — All changes are local only. User needs to push to GitHub Pages.
 - **Recommended Next Action:**
-  - **For User:** `git add index.html && git commit -m "visual: HiDPI scaling + Shahed drone redesign" && git push`
-  - **For Designer:** Continue Sprint 2+ elements from visual-audit.md (stars, sun, moon, buildings, particles, HUD)
-  - **For Coder:** Implement UX Tester briefs (BRIEF-001 through BRIEF-005)
+  - **For User:** Commit and push to deploy
+  - **For UX Tester:** Run Round 2 (HUD Readability + Feedback: C1-C11, F1-F7)
+  - **For Designer:** Continue Sprint 2+ elements from visual-audit.md
+
+---
+
+## Previous Sessions
+
+- **Agent:** Designer
+- **Date:** 2026-03-14
+- **Summary:** Realism & sharpness overhaul per user request. Added HiDPI canvas scaling (devicePixelRatio) for crisp rendering on retina displays. Redesigned drone from quad-rotor to Shahed-136 delta-wing UAV with swept wings, narrow fuselage, V-tail, and pusher propeller.
+- **Key Changes:**
+  1. **HiDPI canvas scaling** — Canvas buffer now multiplied by `devicePixelRatio`. Main canvas, cityCanvas, and batteryCanvas all scale properly.
+  2. **Drone redesign (Shahed-136)** — Replaced quad-rotor with delta-wing kamikaze drone.
+- **Files Modified:** `index.html`, `.claude/visual-audit.md`, `.claude/decisions-log.md`
 
 ---
 

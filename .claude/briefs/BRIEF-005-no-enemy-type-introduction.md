@@ -57,8 +57,10 @@ None.
 
 ---
 
-## Resolution (filled by designer/coder when resolved)
-- **Resolved by:**
-- **Date:**
+## Resolution
+- **Resolved by:** Designer Agent
+- **Date:** 2026-03-14
+- **What was done:** Added seenTypes tracking (reset in startGame), first-spawn callout in spawnMissile(), and alert rendering in draw(). Each enemy type shows a colored callout on first appearance (rocket=orange, drone=blue, ballistic=red, decoy=yellow) that fades over 3 seconds. Added rocketAlert/decoyAlert i18n strings in all 3 languages.
+- **Verified by UX Tester:** Pending
 - **What was done:**
 - **Verified by UX Tester:** Pending

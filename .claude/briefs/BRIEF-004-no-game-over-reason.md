@@ -59,7 +59,11 @@ None.
 
 ---
 
-## Resolution (filled by designer/coder when resolved)
+## Resolution
+- **Resolved by:** Designer Agent
+- **Date:** 2026-03-14
+- **What was done:** Added "[CityName] was destroyed" in red (#ff6666) with glow between wave/combo stats and rating in drawGameOver(). Added i18n key `cityDestroyed` in all 3 languages. Shifted rating and buttons down to make room.
+- **Verified by UX Tester:** Pending
 - **Resolved by:**
 - **Date:**
 - **What was done:**

@@ -50,7 +50,7 @@ None.
 ---
 
 ## Resolution (filled by designer/coder when resolved)
-- **Resolved by:**
-- **Date:**
-- **What was done:**
+- **Resolved by:** Designer Agent
+- **Date:** 2026-03-14
+- **What was done:** Wrapped entire ammo bar and "Out of Interceptors" warning in `if (sirenTimer <= 0 && cityIntroTimer <= 0)` condition in drawHUD().
 - **Verified by UX Tester:** Pending

@@ -8,7 +8,7 @@
 - **Assigned to:** Designer
 - **Related audit items:** A2, A3, A5, A7, B4, B8, B9, C6, I5
 - **Related briefs:** BRIEF-001, BRIEF-002, BRIEF-003, BRIEF-004, BRIEF-005
-- **Status:** OPEN
+- **Status:** RESOLVED
 
 ---
 
@@ -104,7 +104,7 @@ Then update all 5 brief files' status to RESOLVED and update HANDOFF.md.
 ---
 
 ## Resolution (filled by designer when resolved)
-- **Resolved by:**
-- **Date:**
-- **What was done:**
+- **Resolved by:** Designer Agent
+- **Date:** 2026-03-14
+- **What was done:** All 5 fixes implemented and verified. Tutorial hint during siren, Wave 1 display fix, hidden ammo during siren, city destroyed message on game over, and enemy type callouts on first spawn.
 - **Verified by UX Tester:** Pending
