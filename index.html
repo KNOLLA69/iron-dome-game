@@ -1760,9 +1760,9 @@ function getEnemyWeights(w) {
 
 function getWaveConfig(w) {
   return {
-    missiles: 8 + w * 3,
-    missileSpeed: 1.0 + w * 0.08,
-    missileInterval: Math.max(35, 100 - w * 4),
+    missiles: 6 + w * 2,
+    missileSpeed: 0.9 + w * 0.06,
+    missileInterval: Math.max(40, 110 - w * 4),
     enemyWeights: getEnemyWeights(w),
   };
 }
@@ -1886,7 +1886,7 @@ const ENEMY_TYPES = {
   rocket:    { speedMult: 1.0, hp: 1, hitbox: 28, points: 1, color: '#888' },
   drone:     { speedMult: 1.1, hp: 1, hitbox: 22, points: 2, color: '#5588bb' },
   ballistic: { speedMult: 0.7, hp: 3, hitbox: 35, points: 5, color: '#cc4444' },
-  decoy:     { speedMult: 2.0, hp: 1, hitbox: 15, points: 1, color: '#ffaa44' },
+  decoy:     { speedMult: 0.7, hp: 1, hitbox: 20, points: 1, color: '#ffaa44' },
 };
 
 function spawnMissile(forceType) {
@@ -1917,9 +1917,9 @@ function spawnMissile(forceType) {
     const alertColors = { rocket: '#ff8844', drone: '#5599ee', ballistic: '#ff4444', decoy: '#ffcc44' };
     enemyAlert = { text: t(alertKeys[type]), color: alertColors[type], timer: 180 };
   }
-  // Decoys spawn in groups of 3-5
+  // Decoys spawn in groups of 5
   if (type === 'decoy' && !forceType) {
-    const extra = 2 + Math.floor(Math.random() * 3);
+    const extra = 4;
     for (let i = 0; i < extra; i++) {
       setTimeout(() => { if (state === 'playing') spawnMissile('decoy'); }, i * 80);
     }
