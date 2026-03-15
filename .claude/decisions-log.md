@@ -324,9 +324,73 @@
 
 ---
 
+### DECISION-037: Reduce Decoy Group Size from 5 to 3 (IMPLEMENTED)
+- **Date:** 2026-03-14
+- **Agent:** Mechanic
+- **Context:** Round 1 mechanics audit identified the decoy group spawn mechanic as the root cause of two difficulty cliffs (wave 7 and wave 10). Currently, one "decoy" spawn event produces 5 bodies (1 from wave counter + 4 extras via setTimeout). Each body deals full city damage. This creates massive hidden enemy inflation: wave 15 has 36 base enemies but ~64 effective. Decoys make up 55% of all enemy bodies at only 20% weight. Ammo ratio drops from 4:1 (waves 1-6) to 2.2:1 (waves 10+) because ammo is calculated on base count only.
+- **Decision (PROPOSED — awaiting approval):** Change decoy extra spawn count from 4 to 2 (total group: 3 instead of 5). Single line change at `spawnMissile()` line ~2162: `const extra = 4` → `const extra = 2`.
+- **Alternatives Considered:**
+  1. **Count each decoy body against waveMissilesLeft** — Would eliminate inflation but at 20% weight, decoys would consume disproportionate budget (7 events × 5 = 35 of 36 slots). Rejected: breaks wave pacing.
+  2. **Decoys don't deal city damage** — Makes them pure distractors. Players could rationally ignore them. Rejected: removes the interesting "do I shoot the slow decoy or the fast rocket?" decision.
+  3. **Reduce decoy weight in late waves** — Addresses symptom not cause. Would reduce late-game variety. Rejected.
+  4. **Increase city HP to compensate** — Hides the problem. Doesn't fix ammo:enemy ratio. Rejected.
+  5. **Group of 3 + increase decoy speed to 1.2×** — Makes decoys faster (more "decoy-like") and smaller groups. Considered as Phase 2 if group reduction alone isn't enough.
+- **Rationale:** Group of 3 is the minimum change that fixes all 5 flagged elements:
+  - A3 (wave 7-9): Effective enemies drop from ~94 to ~78 total (17% reduction vs 88% cliff)
+  - A4 (wave 10-12): Effective drops from ~150 to ~118 (21% reduction)
+  - A6 (overall curve): City-to-city jumps become 48→78→118→146 (62%→51%→24%) vs current 48→94→150→184 (96%→60%→23%). Much smoother.
+  - B4 (decoy value): Unintercepted group = 3 damage instead of 5 (43% of Haifa HP vs 71%)
+  - B6 (late variety): Decoy body share drops from 55% to ~28%
+  - Ammo:effective ratio improves from 2.2:1 to 2.8:1 for late waves
+- **Impact:** Single constant change. No new mechanics. All other enemy types unaffected.
+- **Status:** IMPLEMENTED (2026-03-15). Changed `const extra = 4` → `const extra = 2` at line ~2162. Verified via preview: decoy groups spawn 3 bodies (1 base + 2 extras).
+
+### DECISION-038: Mechanics Audit Round 1 Complete — Baseline Documented
+- **Date:** 2026-03-14
+- **Agent:** Mechanic
+- **Context:** First mechanics audit session. Needed to verify actual code values (which differed significantly from persona snapshot due to prior undocumented balance pass), evaluate all 12 difficulty + enemy elements, and establish a quantitative baseline.
+- **Decision:** Documented verified wave data for all 15 waves, per-city totals, effective enemy counts including decoy amplification, and ammo ratios. Rated 12 elements: 7 TUNED, 5 NEEDS TUNING. All 5 issues trace to same root cause (decoy group size). Filed DECISION-037 as proposed fix.
+- **Alternatives Considered:** N/A (audit, not design change)
+- **Rationale:** Establishing accurate baseline is prerequisite for all future tuning. Previous persona snapshot values were incorrect (showed old pre-tune values like drone 1.4× speed, decoy 2.0× speed, missile formula 10+w×5). Verified data now documented in mechanics-audit.md.
+- **Impact:** mechanics-audit.md updated with verified values, ratings, wave data table. 12/38 elements now audited.
+
+---
+
 ## Future Decisions
 
+### DECISION-039: Combo Gameplay Buffs — Streaks Buff Interceptors, Not Just Score
+- **Date:** 2026-03-15
+- **Agent:** Mechanic
+- **Context:** User asked "what's missing to make this game irresistible?" Identified that the combo system only affects score multiplier — there's no gameplay reward for maintaining streaks. This means combos feel like a bookkeeping exercise rather than a power fantasy moment. The "one more try" factor requires the player to FEEL powerful when they're playing well.
+- **Decision:** Added `getComboBuffs()` function that returns three escalating buffs based on combo count:
+  - 3+ combo: 20% faster interceptors (speedMult: 1.2)
+  - 6+ combo: 50% bigger blast radius (30px → 45px)
+  - 10+ combo: double homing range (60px → 120px)
+  Wired into `fireInterceptor()` (speed), homing logic (range), and detonation logic (blast radius).
+- **Alternatives Considered:**
+  1. **Visual-only feedback (screen shake, color shift)** — Doesn't change gameplay feel. Players want to feel more powerful, not just see fancier effects. Rejected as insufficient alone (Designer can add visual flair separately).
+  2. **Combo → temporary ammo refund** — Interesting but overlaps with Rapid Fire power-up purpose. Rejected: dilutes power-up identity.
+  3. **Combo → slow enemy missiles** — Hard to notice in the chaos. Rejected: invisible buffs feel like nothing.
+  4. **Higher multiplier numbers** — Score inflation doesn't create the dopamine hit. Rejected: more of the same.
+- **Rationale:** These buffs create a virtuous cycle: hit streak → missiles fly faster and blast wider → easier to extend streak → peak power fantasy → miss one → back to baseline → want to get back to that peak → "one more try." Each tier is noticeable but not game-breaking. The 10+ combo (double homing) is hard to reach and rewards elite play.
+- **Impact:** New function `getComboBuffs()` + 3 call sites modified. No visual changes (Designer could add combo tier indicators). All values reset when combo breaks (existing comboTimer expiry).
+- **Status:** IMPLEMENTED (2026-03-15). Verified via preview: speed=12.0 at combo 10 (expected 10×1.2), speed=10.0 at combo 0.
+
+### DECISION-040: Monetization via Tip Jar Only
+- **Date:** 2026-03-15
+- **Agent:** Mechanic
+- **Context:** User confirmed "modest monetization" approach. Discussed continue/extra-life system but agreed it doesn't fit a game with a reachable 15-wave endpoint — paying to continue undermines the achievement of completing all waves. User explicitly rejected "donation" framing, chose "tip jar" instead.
+- **Decision:** Add tip jar button on menu screen and victory screen. No gameplay impact. No pay-to-win. No ads. Brief filed for Designer (BRIEF-011) to implement the UI.
+- **Alternatives Considered:**
+  1. **Continue / extra life purchase** — Rejected: undermines game completion achievement in a finite 15-wave game.
+  2. **Cosmetic skins** — Scope too large for single-file game. Rejected.
+  3. **Remove ads for payment** — No ads exist. N/A.
+  4. **Donation framing** — User explicitly preferred "tip jar" over "donation."
+- **Rationale:** Tip jar preserves game integrity. Players who enjoy the game can tip voluntarily. No gameplay barrier. Placed on victory screen (peak satisfaction moment) and menu (returning players).
+- **Impact:** UI-only change. No game logic. Briefed to Designer agent.
+- **Status:** BRIEF FILED (BRIEF-011). Awaiting Designer implementation.
+
 > Append new decisions below this line. Always include date, context, alternatives, and rationale.
-> Number sequentially from DECISION-037 onward.
+> Number sequentially from DECISION-041 onward.
 
 ---

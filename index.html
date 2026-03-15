@@ -11,7 +11,7 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
-  background: #000;
+  background: linear-gradient(180deg, #030610 0%, #0a1430 40%, #182a4a 70%, #1e2838 100%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1479,6 +1479,7 @@ let legalBtnRects = []; // [{x,y,w,h,tab}]
 let legalCloseBtnRect = { x: 0, y: 0, w: 0, h: 0 };
 let legalTabBtnRects = []; // [{x,y,w,h,tab}]
 let langBtnRects = []; // [{x,y,w,h,lang}]
+let hoveredBtn = null; // tracks which button the mouse is over
 // Name input for leaderboard
 let nameInput = '';
 let nameInputActive = false;
@@ -1959,6 +1960,23 @@ document.addEventListener('keydown', (e) => {
 // Mouse events (desktop)
 canvas.addEventListener('mousemove', (e) => {
   updateAim(e.clientX, e.clientY);
+  // Button hover detection for cursor feedback
+  if (state === 'menu' || state === 'gameover' || state === 'victory') {
+    const inRect = (r) => r && mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h;
+    const prevHover = hoveredBtn;
+    hoveredBtn = null;
+    if (inRect(startBtnRect)) hoveredBtn = 'start';
+    else if (inRect(lbBtnRect)) hoveredBtn = 'lb';
+    else if (inRect(contactBtnRect)) hoveredBtn = 'contact';
+    else if (inRect(playAgainBtnRect)) hoveredBtn = 'playAgain';
+    else {
+      for (const sr of shareBtnRects) { if (inRect(sr)) { hoveredBtn = 'share'; break; } }
+      if (!hoveredBtn) for (const lr of legalBtnRects) { if (inRect(lr)) { hoveredBtn = 'legal'; break; } }
+    }
+    canvas.style.cursor = hoveredBtn ? 'pointer' : 'default';
+  } else if (state === 'playing') {
+    canvas.style.cursor = 'crosshair';
+  }
 });
 canvas.addEventListener('click', () => {
   handleClick();
@@ -2085,7 +2103,7 @@ function fireInterceptor() {
   }
   if (!unlimitedAmmo) ammo--;
   if (!tutorialSeen) { tutorialSeen = true; localStorage.setItem('tutorialSeen', '1'); }
-  const speed = 10;
+  const speed = 10 * getComboBuffs().speedMult;
   const dx = mouseX - batteryX, dy = mouseY - batteryY;
   const dist = Math.sqrt(dx*dx + dy*dy);
   interceptors.push({
@@ -2157,9 +2175,9 @@ function spawnMissile(forceType) {
     const alertColors = { rocket: '#ff8844', drone: '#5599ee', ballistic: '#ff4444', decoy: '#ffcc44' };
     enemyAlert = { text: t(alertKeys[type]), color: alertColors[type], timer: 180 };
   }
-  // Decoys spawn in groups of 5
+  // Decoys spawn in groups of 3 (DECISION-037: reduced from 5 to smooth difficulty curve)
   if (type === 'decoy' && !forceType) {
-    const extra = 4;
+    const extra = 2;
     for (let i = 0; i < extra; i++) {
       setTimeout(() => { if (state === 'playing') spawnMissile('decoy'); }, i * 80);
     }
@@ -2184,6 +2202,15 @@ function getMultiplier() {
   if (combo < 6) return 2;
   if (combo < 10) return 3;
   return 5;
+}
+
+// Combo streaks buff gameplay, not just score (DECISION-039)
+function getComboBuffs() {
+  return {
+    speedMult: combo >= 3 ? 1.2 : 1.0,       // 3+ combo: 20% faster interceptors
+    blastRadius: combo >= 6 ? 45 : 30,        // 6+ combo: 50% bigger blast
+    homingRange: combo >= 10 ? 120 : 60        // 10+ combo: double homing range
+  };
 }
 
 function addFloat(x, y, text, color, size) {
@@ -2438,7 +2465,7 @@ function update() {
 
     // Proximity homing - find nearest missile in ±30° cone within 60px
     const icHeading = Math.atan2(ic.vy, ic.vx);
-    let closestInCone = null, closestDist = 60;
+    let closestInCone = null, closestDist = getComboBuffs().homingRange;
     for (let j = 0; j < missiles.length; j++) {
       const m = missiles[j];
       const dx = m.x - ic.x, dy = m.y - ic.y;
@@ -2472,7 +2499,7 @@ function update() {
       for (let j = missiles.length-1; j >= 0; j--) {
         const m = missiles[j];
         const bd = Math.sqrt((ic.x-m.x)**2 + (ic.y-m.y)**2);
-        if (bd < 30) {
+        if (bd < getComboBuffs().blastRadius) {
           m.hp--;
           if (m.hp <= 0) {
             addCombo();
@@ -4053,28 +4080,28 @@ function drawHUD() {
 
   // City endurance bar (left, after pause)
   const endBarX = pbX + pbS + fz(8);
-  const endBarW = fz(80), endBarH = fz(8);
-  const endBarY = hudH * 0.35;
+  const endBarW = fz(110), endBarH = fz(10);
+  const endBarY = hudH * 0.32;
   // City name label above bar
-  ctx.fillStyle = 'rgba(150,200,255,0.6)';
-  ctx.font = `${fz(8)}px Arial`;
+  ctx.fillStyle = 'rgba(150,200,255,0.7)';
+  ctx.font = `bold ${fz(11)}px Arial`;
   ctx.textAlign = 'left';
   const cName = CITIES[currentCityIdx] ? (CITIES[currentCityIdx].name[currentLang] || CITIES[currentCityIdx].name.en) : '';
   ctx.fillText(cName, endBarX, endBarY - 2);
   // Bar background
   ctx.fillStyle = 'rgba(40,40,50,0.6)';
-  ctx.beginPath(); ctx.roundRect(endBarX, endBarY + 2, endBarW, endBarH, 3); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(endBarX, endBarY + 2, endBarW, endBarH, 4); ctx.fill();
   // Bar fill - green→yellow→red
   const endRatio = cityMaxHP > 0 ? Math.max(0, 1 - cityDamage / cityMaxHP) : 1;
   if (endRatio > 0) {
     const endColor = endRatio > 0.6 ? '#22dd77' : endRatio > 0.3 ? '#ffcc33' : '#ff4444';
     ctx.fillStyle = endColor;
-    ctx.beginPath(); ctx.roundRect(endBarX, endBarY + 2, endBarW * endRatio, endBarH, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(endBarX, endBarY + 2, endBarW * endRatio, endBarH, 4); ctx.fill();
   }
   // Damage count
-  ctx.fillStyle = endRatio > 0.3 ? 'rgba(200,220,255,0.7)' : '#ff4444';
-  ctx.font = `bold ${fz(8)}px Arial`;
-  ctx.fillText(`${cityDamage}/${cityMaxHP}`, endBarX + endBarW + fz(4), endBarY + endBarH);
+  ctx.fillStyle = endRatio > 0.3 ? 'rgba(200,220,255,0.8)' : '#ff4444';
+  ctx.font = `bold ${fz(10)}px Arial`;
+  ctx.fillText(`${cityDamage}/${cityMaxHP}`, endBarX + endBarW + fz(4), endBarY + endBarH + 1);
   // Shield indicator
   if (shieldHP > 0) {
     ctx.font = `${fz(12)}px Arial`;
@@ -4152,7 +4179,7 @@ function drawHUD() {
     }
     // Ammo text
     ctx.fillStyle = ammoRatio > 0.2 ? 'rgba(200,220,255,0.7)' : '#ff4444';
-    ctx.font = `bold ${fz(9)}px Arial`;
+    ctx.font = `bold ${fz(11)}px Arial`;
     ctx.textAlign = 'left';
     ctx.fillText(`${t('ammo')}: ${ammo}/${maxAmmo}`, barMargin, barY - fz(3));
     // Out of ammo warning
@@ -4196,24 +4223,38 @@ function drawHUD() {
     }
   }
 
-  // Crosshair
+  // Crosshair — dark outline behind for contrast on all backgrounds
   if (waveState === 'playing') {
     const cx = mouseX, cy = mouseY;
-    ctx.strokeStyle = `rgba(100, 255, 150, ${0.3 + Math.sin(frame*0.08)*0.1})`;
-    ctx.lineWidth = 1;
+    // Dark outline layer (drawn first, thicker)
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.lineWidth = 3;
     ctx.setLineDash([4, 4]);
     ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI*2); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.strokeStyle = 'rgba(100, 255, 150, 0.6)';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(cx-12, cy); ctx.lineTo(cx-5, cy);
     ctx.moveTo(cx+5, cy); ctx.lineTo(cx+12, cy);
     ctx.moveTo(cx, cy-12); ctx.lineTo(cx, cy-5);
     ctx.moveTo(cx, cy+5); ctx.lineTo(cx, cy+12);
     ctx.stroke();
-    ctx.fillStyle = 'rgba(100, 255, 150, 0.8)';
-    ctx.beginPath(); ctx.arc(cx, cy, 1.5, 0, Math.PI*2); ctx.fill();
+    // Green foreground layer
+    ctx.strokeStyle = `rgba(100, 255, 150, ${0.5 + Math.sin(frame*0.08)*0.1})`;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(100, 255, 150, 0.8)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx-12, cy); ctx.lineTo(cx-5, cy);
+    ctx.moveTo(cx+5, cy); ctx.lineTo(cx+12, cy);
+    ctx.moveTo(cx, cy-12); ctx.lineTo(cx, cy-5);
+    ctx.moveTo(cx, cy+5); ctx.lineTo(cx, cy+12);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(100, 255, 150, 0.9)';
+    ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI*2); ctx.fill();
   }
 }
 
@@ -4355,24 +4396,29 @@ function drawLeaderboardTable(baseY) {
   });
 }
 
-function drawMenuButton(x, y, w, h, text, colors, icon) {
+function drawMenuButton(x, y, w, h, text, colors, icon, isHovered) {
   const btnGrad = ctx.createLinearGradient(0, y, 0, y+h);
   btnGrad.addColorStop(0, colors[0]);
   btnGrad.addColorStop(0.5, colors[1]);
   btnGrad.addColorStop(1, colors[2]);
   ctx.save();
   ctx.shadowColor = colors[3] || 'rgba(0,0,0,0.2)';
-  ctx.shadowBlur = 12;
+  ctx.shadowBlur = isHovered ? 22 : 12;
   ctx.fillStyle = btnGrad;
   ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.fill();
   ctx.shadowBlur = 0;
   ctx.restore();
+  // Hover brightening overlay
+  if (isHovered) {
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.fill();
+  }
   // Shine
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillStyle = `rgba(255,255,255,${isHovered ? 0.14 : 0.08})`;
   ctx.beginPath(); ctx.roundRect(x + 2, y + 1, w - 4, h*0.4, [10,10,0,0]); ctx.fill();
   // Border
-  ctx.strokeStyle = colors[4] || 'rgba(255,255,255,0.15)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = isHovered ? 'rgba(255,255,255,0.35)' : (colors[4] || 'rgba(255,255,255,0.15)');
+  ctx.lineWidth = isHovered ? 1.5 : 1;
   ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.stroke();
   // Text with icon
   ctx.fillStyle = '#fff';
@@ -4383,7 +4429,7 @@ function drawMenuButton(x, y, w, h, text, colors, icon) {
 }
 
 function drawMenu() {
-  ctx.fillStyle = 'rgba(0,5,15,0.88)';
+  ctx.fillStyle = 'rgba(0,5,15,0.55)';
   ctx.fillRect(0,0,W,H);
 
   // Language toggle at top center
@@ -4403,7 +4449,9 @@ function drawMenu() {
 
   const bigBtnW = Math.min(W * 0.7, fz(320));
   const bigBtnH = fz(55);
-  let curY = fz(75);
+  // Vertically center menu content
+  const totalMenuH = fz(38) + fz(22) + fz(42) + (highScore > 0 ? fz(18) : 0) + fz(6) + bigBtnH*3 + fz(10)*2 + fz(18) + fz(28) + fz(14) + fz(14) + fz(40) + fz(12) + fz(30);
+  let curY = Math.max(fz(40), (H - totalMenuH) / 2);
 
   // Title with glow
   const titleY = curY + Math.sin(frame*0.025)*4;
@@ -4437,19 +4485,19 @@ function drawMenu() {
   // New Game (green)
   startBtnRect = { x: bx, y: curY, w: bigBtnW, h: bigBtnH };
   drawMenuButton(bx, curY, bigBtnW, bigBtnH, t('newGame'),
-    ['#00cc66','#00bb55','#008833','rgba(0,200,100,0.35)','rgba(0,255,100,0.35)'], '▶');
+    ['#00cc66','#00bb55','#008833','rgba(0,200,100,0.35)','rgba(0,255,100,0.35)'], '▶', hoveredBtn === 'start');
   curY += bigBtnH + fz(10);
 
   // Leaderboard (blue)
   lbBtnRect = { x: bx, y: curY, w: bigBtnW, h: bigBtnH };
   drawMenuButton(bx, curY, bigBtnW, bigBtnH, t('leaderboard'),
-    ['#2255aa','#1d4488','#153370','rgba(50,100,200,0.3)','rgba(80,150,255,0.3)'], '🏆');
+    ['#2255aa','#1d4488','#153370','rgba(50,100,200,0.3)','rgba(80,150,255,0.3)'], '🏆', hoveredBtn === 'lb');
   curY += bigBtnH + fz(10);
 
   // Contact (dark blue)
   contactBtnRect = { x: bx, y: curY, w: bigBtnW, h: bigBtnH };
   drawMenuButton(bx, curY, bigBtnW, bigBtnH, t('contact'),
-    ['#334466','#2a3a55','#223044','rgba(50,70,120,0.3)','rgba(100,130,200,0.2)'], '✉');
+    ['#334466','#2a3a55','#223044','rgba(50,70,120,0.3)','rgba(100,130,200,0.2)'], '✉', hoveredBtn === 'contact');
   curY += bigBtnH + fz(18);
 
   // Play counter

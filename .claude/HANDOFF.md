@@ -6,26 +6,89 @@
 
 ## Latest Session
 
+- **Agent:** Mechanic
+- **Date:** 2026-03-15
+- **Summary:** Implemented "irresistibility pass" — three gameplay changes to improve retention and fun factor. Decoy group size reduced (DECISION-037), combo gameplay buffs added (DECISION-039), tip jar monetization decided (DECISION-040).
+- **Key Changes:**
+  1. **Decoy group 5→3 (DECISION-037):** `const extra = 4` → `const extra = 2` in `spawnMissile()`. Smooths difficulty curve at waves 7+ where decoy inflation created hidden cliffs. Verified via preview.
+  2. **Combo gameplay buffs (DECISION-039):** New `getComboBuffs()` function returns escalating interceptor buffs at combo milestones:
+     - 3+ combo: 20% faster interceptors (speed 10→12)
+     - 6+ combo: 50% bigger blast radius (30→45px)
+     - 10+ combo: double homing range (60→120px)
+     Wired into `fireInterceptor()`, homing logic, and detonation logic. Verified via preview.
+  3. **Tip jar decision (DECISION-040):** User chose tip jar over donation/continue/ads. Brief filed for Designer (BRIEF-011).
+- **Files Modified:**
+  - `index.html` — decoy extra count, new `getComboBuffs()` function, 3 wiring points
+  - `.claude/decisions-log.md` — DECISION-037 updated to IMPLEMENTED, added DECISION-039, DECISION-040
+  - `.claude/HANDOFF.md` — This file
+- **Files Created:**
+  - `.claude/briefs/BRIEF-011-tip-jar-button.md`
+- **Blocked On:** Nothing
+- **Recommended Next Action:**
+  - **For Designer:** Pick up BRIEF-010 (home page redesign) — highest priority visual improvement
+  - **For Designer:** Also pending: BRIEF-007 (endurance bar) + BRIEF-008 (crosshair) + BRIEF-009 (ammo text + button hover) + BRIEF-011 (tip jar button)
+  - **For Mechanic:** Run Round 2 (Scoring + Economy: C1-C5, D1-D4)
+  - **For UX Tester:** Run Round 3 (Mobile: D1-D9)
+
+---
+
+## Previous Sessions
+
+- **Agent:** UX Tester
+- **Date:** 2026-03-15
+- **Summary:** Filed BRIEF-010 for home page / menu screen visual overhaul.
+- **Key Findings:** Black void letterboxing, menu atmosphere hidden behind overlay, menu not centered, no button hover feedback.
+- **Files Created:** `.claude/briefs/BRIEF-010-home-page-menu-redesign.md`
+
+---
+
+## Previous Sessions
+
+- **Agent:** Mechanic
+- **Date:** 2026-03-14
+- **Summary:** Completed Round 1 mechanics audit — evaluated all 12 Difficulty Curve (A1-A6) and Enemy Value (B1-B6) elements. Verified actual code values differ from persona snapshot due to prior balance pass. Identified decoy group spawn as root cause of two difficulty cliffs. Proposed fix in DECISION-037.
+- **Key Findings:**
+  1. **7 of 12 elements TUNED:** A1 (waves 1-3), A2 (waves 4-6), A5 (waves 13-15), B1 (rocket), B2 (drone), B3 (ballistic), B5 (intro pacing)
+  2. **5 of 12 elements NEEDS TUNING:** A3 (wave 7-9 cliff), A4 (wave 10-12 cliff), A6 (curve shape), B4 (decoy threat:reward), B6 (late-game variety)
+  3. **Root cause:** Decoy group spawn (1 counter slot → 5 bodies) creates hidden enemy inflation. Wave 15: 36 base → 64 effective. Ammo ratio drops from 4:1 to 2.2:1.
+  4. **Proposed fix (DECISION-037):** `const extra = 4` → `const extra = 2` (group of 3 instead of 5). Smooths curve, improves ammo ratio to 2.8:1, reduces decoy body share from 55% to 28%.
+- **No code changes made.** Audit-only session.
+- **Files Modified:**
+  - `.claude/mechanics-audit.md` — 12 elements rated, verified wave data table, Round 1 summary
+  - `.claude/decisions-log.md` — DECISION-037 (proposed decoy fix), DECISION-038 (audit baseline)
+  - `.claude/HANDOFF.md` — This file
+- **Blocked On:** DECISION-037 needs approval before implementation
+- **Recommended Next Action:**
+  - **For User:** Review and approve/reject DECISION-037 (decoy group 5→3)
+  - **For Mechanic:** If approved, implement fix. Then run Round 2 (Scoring + Economy: C1-C5, D1-D4).
+  - **For Designer:** Implement BRIEF-007 (endurance bar) + BRIEF-008 (crosshair) — highest impact P2 fixes
+  - **For UX Tester:** Run Round 3 (Mobile: D1-D9)
+
+---
+
+## Previous Sessions
+
+- **Agent:** UX Tester
+- **Date:** 2026-03-14
+- **Summary:** Completed Round 2 of UX audit (HUD Readability + Feedback: C1-C11, F1-F7). Tested 17 of 18 cases. Filed 3 new briefs. Verified Round 1 fixes (BRIEF-001 through BRIEF-005 all confirmed working).
+- **Key Findings:**
+  1. **P2: Endurance bar too small (BRIEF-007)**
+  2. **P2: Crosshair invisible on day sky (BRIEF-008)**
+  3. **P2/P3: Ammo text too small + no button feedback (BRIEF-009)**
+- **Files Created:** BRIEF-007, BRIEF-008, BRIEF-009
+
+---
+
 - **Agent:** Designer (implementing UX fixes)
 - **Date:** 2026-03-14
 - **Summary:** Implemented all 5 UX Round 1 fixes from BRIEF-006 (consolidated). All fixes verified visually via preview server.
 - **Key Changes:**
-  1. **Fix 1 — Controls tutorial (BRIEF-001, P1):** During siren intro, shows "Aim with mouse and click to fire interceptor" (desktop) or mobile equivalent. Gated by localStorage `tutorialSeen` flag, set on first fire.
-  2. **Fix 2 — Wave 0 display bug (BRIEF-002, P2):** HUD now shows `wave + 1` during siren_intro so it reads "Wave 1" not "Wave 0".
-  3. **Fix 3 — Hidden ammo during siren (BRIEF-003, P2):** Entire ammo bar + "Out of Interceptors" warning wrapped in `if (sirenTimer <= 0 && cityIntroTimer <= 0)`.
-  4. **Fix 4 — City destroyed message (BRIEF-004, P2):** Game over screen now shows "[CityName] was destroyed" in red below wave/combo stats.
-  5. **Fix 5 — Enemy type callouts (BRIEF-005, P2):** First-spawn callout per enemy type with color-coded text (rocket=orange, drone=blue, ballistic=red, decoy=yellow), fades over 3s.
-- **i18n strings added:** `rocketAlert`, `decoyAlert`, `cityDestroyed` in he/en/de.
-- **State variables added:** `tutorialSeen`, `seenTypes`, `enemyAlert`.
-- **Files Modified:**
-  - `index.html` — All 5 fixes across TEXTS, state vars, startGame, fireInterceptor, spawnMissile, drawSirenIntro, drawHUD, drawGameOver, draw, update
-  - `.claude/briefs/BRIEF-001 through BRIEF-006` — All marked RESOLVED
-  - `.claude/HANDOFF.md` — This file
-- **Blocked On:** Nothing
-- **Recommended Next Action:**
-  - **For User:** Commit and push to deploy
-  - **For UX Tester:** Run Round 2 (HUD Readability + Feedback: C1-C11, F1-F7)
-  - **For Designer:** Continue Sprint 2+ elements from visual-audit.md
+  1. **Fix 1 — Controls tutorial (BRIEF-001, P1)**
+  2. **Fix 2 — Wave 0 display bug (BRIEF-002, P2)**
+  3. **Fix 3 — Hidden ammo during siren (BRIEF-003, P2)**
+  4. **Fix 4 — City destroyed message (BRIEF-004, P2)**
+  5. **Fix 5 — Enemy type callouts (BRIEF-005, P2)**
+- **Files Modified:** `index.html`, briefs BRIEF-001 through BRIEF-006
 
 ---
 

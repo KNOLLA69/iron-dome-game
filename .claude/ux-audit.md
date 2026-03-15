@@ -62,17 +62,17 @@
 
 | # | Test Case | Status | Priority | Findings / Brief |
 |---|-----------|--------|----------|------------------|
-| C1 | Score visibility — Can player read score during gameplay? | UNTESTED | — | — |
-| C2 | Score against all sky states — Readable on day/sunset/night? | UNTESTED | — | — |
-| C3 | Ammo bar clarity — Is ammo level instantly readable at a glance? | UNTESTED | — | — |
-| C4 | Endurance bar clarity — Does player understand city health at a glance? | UNTESTED | — | — |
-| C5 | Combo display — Is combo visible without distracting from gameplay? | UNTESTED | — | — |
-| C6 | Wave/city indicator — Does player know which wave and city they are on? | ISSUES | P2 | "Wave 0 - Nahariya" displayed during siren intro (should be Wave 1). After siren, displays correctly as "Wave 1 - Nahariya" with missile count. → BRIEF-002 |
-| C7 | Pause button discoverability — Can player find pause without instructions? | UNTESTED | — | — |
-| C8 | Kill feed readability — Is the kill feed readable and useful? | UNTESTED | — | — |
-| C9 | Active power-up indicator — Player knows when power-up is active + timer? | UNTESTED | — | — |
-| C10 | Information overload check — Is the HUD too cluttered? | UNTESTED | — | — |
-| C11 | Crosshair visibility — Is crosshair visible against all backgrounds? | UNTESTED | — | — |
+| C1 | Score visibility — Can player read score during gameplay? | PASS | — | Score at fz(26) bold white with blue glow. Very prominent in top-right. Readable at a glance across all states. |
+| C2 | Score against all sky states — Readable on day/sunset/night? | PASS | — | Dark HUD bar (rgba(0,8,18,0.6)) provides consistent contrast. Score equally readable on day, sunset, and night. Tested all 3 states. |
+| C3 | Ammo bar clarity — Is ammo level instantly readable at a glance? | ISSUES | P2 | Ammo BAR is good (full-width, color-coded green→yellow→red). But text "Interceptors: 10/32" at fz(9) = 9px is too small to read during combat. → BRIEF-009 |
+| C4 | Endurance bar clarity — Does player understand city health at a glance? | ISSUES | P2 | City name fz(8), damage "0/5" fz(8), bar 80x8px — all too small. Most critical survival metric is least visible HUD element. → BRIEF-007 |
+| C5 | Combo display — Is combo visible without distracting from gameplay? | PASS | P4 | "COMBO x5" at fz(13) yellow, center-positioned, readable. Timer bar below (2px thin). Multiplier "x2" at fz(9) is small. Scales up at x6+. Functional but timer bar could be thicker. |
+| C6 | Wave/city indicator — Does player know which wave and city they are on? | PASS | — | FIXED: Now correctly shows "Wave 1 - Nahariya" during siren intro (was "Wave 0"). fz(13) bold blue on dark HUD bar. Missile count below at fz(9). (BRIEF-002 RESOLVED) |
+| C7 | Pause button discoverability — Can player find pause without instructions? | PASS | P3 | || icon at 22x22px, far left. Low contrast (rgba(180,200,230,0.6) on rgba(50,60,80,0.4)). No label or hover state. Most gamers will recognize it, but it's subtle. |
+| C8 | Kill feed readability — Is the kill feed readable and useful? | PASS | P3 | fz(10) text at bottom-left with 🎯 prefix. "rocket +1" format. Color-coded per enemy type. Max 3 entries. Small but functional. |
+| C9 | Active power-up indicator — Player knows when power-up is active + timer? | PASS | P3 | Shows emoji + timer ("⚡ 12s") at fz(12) below endurance bar. Adequate but positioned in the small top-left area — could be missed during intense combat. |
+| C10 | Information overload check — Is the HUD too cluttered? | ISSUES | P3 | ~16 HUD elements. Visual hierarchy exists (score biggest, wave prominent, ammo bar full-width). But critical info (city health, ammo count) uses the smallest fonts (fz(8-9)). Score glow draws eye away from survival info. → Related to BRIEF-007, BRIEF-009 |
+| C11 | Crosshair visibility — Is crosshair visible against all backgrounds? | ISSUES | P2 | Green crosshair (rgba(100,255,150,0.3-0.6), 1px lines, 18px dashed circle) nearly invisible against bright day sky. Better on night/sunset. Day is waves 1,4,7,10,13. → BRIEF-008 |
 
 ---
 
@@ -97,6 +97,8 @@
 | # | Test Case | Status | Priority | Findings / Brief |
 |---|-----------|--------|----------|------------------|
 | E1 | Menu-to-game flow — Smooth transition from menu to gameplay? | UNTESTED | — | — |
+| E11 | Menu visual quality — Does the home page make a good first impression? | ISSUES | P2 | Black void letterboxing on non-matching viewports, near-opaque overlay hiding atmosphere, top-heavy layout, no button hover feedback. First impression feels unpolished. → BRIEF-010 |
+| E12 | Menu background/atmosphere — Is the game's mood conveyed on the menu? | ISSUES | P2 | Sky, skyline, and water render beneath menu but 88% opacity overlay blocks them. Menu feels like a flat dark panel, not an atmospheric game screen. → BRIEF-010 |
 | E2 | Game-over-to-menu flow — Can player easily return to menu? | UNTESTED | — | — |
 | E3 | Leaderboard navigation — Open, browse, close leaderboard works? | UNTESTED | — | — |
 | E4 | Legal overlay navigation — Tabs, scrolling, close all function? | UNTESTED | — | — |
@@ -113,13 +115,13 @@
 
 | # | Test Case | Status | Priority | Findings / Brief |
 |---|-----------|--------|----------|------------------|
-| F1 | Click-to-fire latency — Under 100ms from click to interceptor launch? | UNTESTED | — | — |
-| F2 | Button press feedback — Buttons show visual press/hover state? | UNTESTED | — | — |
-| F3 | Screen shake appropriateness — Shake enhances, not annoys? | UNTESTED | — | — |
-| F4 | Sound-visual sync — Audio cues match visual events timing? | UNTESTED | — | — |
-| F5 | Transition smoothness — Fades/reveals are smooth, not jarring? | UNTESTED | — | — |
-| F6 | Loading states — Leaderboard loading has indicator? | UNTESTED | — | — |
-| F7 | Error handling — What if Firebase/network fails? Graceful? | UNTESTED | — | — |
+| F1 | Click-to-fire latency — Under 100ms from click to interceptor launch? | PASS | — | fireInterceptor() called synchronously from click handler. No network delay. Instantaneous. |
+| F2 | Button press feedback — Buttons show visual press/hover state? | ISSUES | P3 | Canvas buttons have zero hover/press states. No cursor:pointer, no brightness change, no scale effect. No pre-click feedback for desktop users. → BRIEF-009 |
+| F3 | Screen shake appropriateness — Shake enhances, not annoys? | PASS | — | shake() function with duration + ease-out. City hit = shake(10), ballistic = shake(20) + screenFlash. Max magnitude 8px. Appropriate. Cannot be disabled (accessibility concern for Round 5). |
+| F4 | Sound-visual sync — Audio cues match visual events timing? | BLOCKED | — | Cannot test audio in hidden preview tab. Web Audio API synthesis used — should be low latency. Deferred to manual testing. |
+| F5 | Transition smoothness — Fades/reveals are smooth, not jarring? | PASS | — | Timer-based alpha fades for wave transitions (300 frames), siren intro, city intro. Game runs at 60fps. Smooth by code review. |
+| F6 | Loading states — Leaderboard loading has indicator? | PASS | — | Shows "..." while loading, "-" for empty state. Adequate. |
+| F7 | Error handling — What if Firebase/network fails? Graceful? | PASS | P3 | Firebase fetch error caught silently — shows empty leaderboard. No crash, no error message. Graceful but player gets no explanation if leaderboard fails to load. |
 
 ---
 
@@ -171,11 +173,11 @@
 | Round | Focus | Tests | Completed | Date |
 |-------|-------|-------|-----------|------|
 | Round 1 | Cold Start + Core Loop | A1-A7, B1-B10 | 15/17 | 2026-03-14 |
-| Round 2 | HUD + Feedback | C1-C11, F1-F7 | 1/18 | — |
+| Round 2 | HUD + Feedback | C1-C11, F1-F7 | 17/18 | 2026-03-14 |
 | Round 3 | Mobile | D1-D9 | 0/9 | — |
 | Round 4 | Navigation + Edge Cases | E1-E10, G1-G8 | 0/18 | — |
 | Round 5 | Accessibility + Emotion | H1-H7, I1-I7 | 0/14 | — |
-| **Total** | | **76 test cases** | **16/76** | — |
+| **Total** | | **76 test cases** | **32/76** | — |
 
 ---
 
@@ -183,8 +185,13 @@
 
 | Brief | Title | Priority | Assigned | Status |
 |-------|-------|----------|----------|--------|
-| BRIEF-001 | No Controls Tutorial or Instructions | P1 | Coder | OPEN |
-| BRIEF-002 | "Wave 0" During Siren Intro | P2 | Coder | OPEN |
-| BRIEF-003 | "Out of Interceptors" During Siren | P2 | Coder | OPEN |
-| BRIEF-004 | Game Over Doesn't Explain Why | P2 | Designer | OPEN |
-| BRIEF-005 | Enemy Types Not Introduced | P2 | Coder | OPEN |
+| BRIEF-001 | No Controls Tutorial or Instructions | P1 | Designer | RESOLVED |
+| BRIEF-002 | "Wave 0" During Siren Intro | P2 | Designer | RESOLVED |
+| BRIEF-003 | "Out of Interceptors" During Siren | P2 | Designer | RESOLVED |
+| BRIEF-004 | Game Over Doesn't Explain Why | P2 | Designer | RESOLVED |
+| BRIEF-005 | Enemy Types Not Introduced | P2 | Designer | RESOLVED |
+| BRIEF-006 | UX Round 1 All Fixes (Consolidated) | P1 | Designer | RESOLVED |
+| BRIEF-007 | Endurance Bar Too Small to Read | P2 | Designer | OPEN |
+| BRIEF-008 | Crosshair Invisible Against Day Sky | P2 | Designer | OPEN |
+| BRIEF-009 | Ammo Text Too Small + No Button Feedback | P2/P3 | Designer | OPEN |
+| BRIEF-010 | Home Page / Menu Screen Needs Visual Overhaul | P2 | Designer | OPEN |

@@ -12,8 +12,8 @@ Multiple specialized agents work on this project. **Before beginning work, ident
 |-------|-------------|------|-------------|
 | **Designer** | `.claude/agents/designer.md` | Visual polish, aesthetics, Canvas rendering | Yes |
 | **UX Tester** | `.claude/agents/ux-tester.md` | Play-test, evaluate UX, write briefs | No |
-| _(Future: Coder)_ | — | Game logic, bugs, features | Yes |
-| _(Future: Marketing)_ | — | Content, social, promotion | No |
+| **Mechanic** | `.claude/agents/mechanic.md` | Game rules, balance, difficulty, systems | Yes |
+| **Marketer** | `.claude/agents/marketer.md` | Organic growth, SEO, social, virality, analytics | Yes (meta/share/analytics only) |
 
 **Default:** If no agent is specified, default to the **Designer** agent.
 
@@ -21,7 +21,7 @@ Multiple specialized agents work on this project. **Before beginning work, ident
 1. Read this file (auto-loaded)
 2. Read your agent persona file from `.claude/agents/`
 3. Read `.claude/HANDOFF.md` for context from previous sessions
-4. Check your work queue (visual-audit.md or ux-audit.md)
+4. Check your work queue (visual-audit.md, ux-audit.md, or mechanics-audit.md)
 5. Check `.claude/briefs/` for pending items
 
 ---
@@ -169,12 +169,14 @@ decoy:     { speedMult: 2.0, hp: 1, hitbox: 15, points: 1 }
 | `decisions-log.md` | All agents | All agents | All agents (append only) |
 | `visual-audit.md` | Designer | All agents | Designer only |
 | `ux-audit.md` | UX Tester | All agents | UX Tester only |
-| `briefs/BRIEF-NNN-*.md` | UX Tester creates | Designer + Coder | UX Tester creates; assigned agent updates status |
+| `mechanics-audit.md` | Mechanic | All agents | Mechanic only |
+| `marketing-plan.md` | Marketer | All agents | Marketer only |
+| `briefs/BRIEF-NNN-*.md` | Any agent creates | All agents | Creator files; assigned agent updates status |
 | `HANDOFF.md` | All agents | All agents | Current agent at session end |
 
 ### Rules
-1. **One agent edits `index.html` at a time.** UX Tester never touches code. Designer and Coder should not have overlapping edit sessions. HANDOFF.md tracks who last modified.
-2. **Briefs are the contract.** UX Tester files a brief → Designer/Coder picks it up → changes status to IN PROGRESS → implements → changes status to RESOLVED. UX Tester re-tests in next session.
+1. **One agent edits `index.html` at a time.** UX Tester never touches code. Designer, Mechanic, and Marketer should not have overlapping edit sessions. HANDOFF.md tracks who last modified.
+2. **Briefs are the contract.** Any agent files a brief → assigned agent picks it up → changes status to IN PROGRESS → implements → changes status to RESOLVED. Filing agent re-tests in next session.
 3. **Decision log is append-only.** Never edit past decisions. To reverse a decision, file a new entry that references the old one.
 4. **Each agent owns their audit document.** Cross-referencing is fine. Editing someone else's audit is not.
 5. **Always update HANDOFF.md** at the end of every session.
@@ -198,9 +200,13 @@ UX Tester finds issue → Files BRIEF in .claude/briefs/
 |----------|------|---------|
 | Designer Persona | `.claude/agents/designer.md` | Visual design standards, working protocols |
 | UX Tester Persona | `.claude/agents/ux-tester.md` | Testing methodology, evaluation criteria |
+| Mechanic Persona | `.claude/agents/mechanic.md` | Game systems expertise, balance protocols |
+| Marketer Persona | `.claude/agents/marketer.md` | Growth strategy, channel expertise |
 | Decision Log | `.claude/decisions-log.md` | Every design decision with rationale |
 | Visual Audit | `.claude/visual-audit.md` | Designer's element inventory + ratings |
 | UX Audit | `.claude/ux-audit.md` | UX Tester's 76 test cases + status |
+| Mechanics Audit | `.claude/mechanics-audit.md` | Mechanic's 38 game system elements + ratings |
+| Marketing Plan | `.claude/marketing-plan.md` | Prioritized growth backlog (21 tactics) |
 | Brief Template | `.claude/briefs/TEMPLATE.md` | Cross-agent issue reporting format |
 | Handoff Log | `.claude/HANDOFF.md` | Session state transfer between agents |
 | Launch Config | `.claude/launch.json` | Dev server setup (python3 http.server 8080) |
