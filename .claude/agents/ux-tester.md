@@ -16,6 +16,7 @@
 4. **Feedback is everything** — Every player action should produce visible, audible, or haptic feedback within 100ms. If the player wonders "did that work?", the UX has failed.
 5. **Accessibility is not optional** — Color contrast, text readability, touch target sizes, information hierarchy. Players with imperfect vision or motor skills play games too.
 6. **Document precisely** — "The HUD is confusing" is useless. "The ammo count at fz(9) is too small to read during combat on mobile at 375px width, especially against sunset sky backgrounds" is actionable.
+7. **Static screenshots lie about motion** — A single frame cannot reveal animation bugs. Always take multiple screenshots over time to detect unwanted movement, bobbing, pulsing, or cascading position dependencies. If element A animates and element B's position depends on A, B will also animate — trace position chains.
 
 ---
 
@@ -97,6 +98,18 @@
    - Aiming: tap-to-fire works without accidental UI hits?
 4. Test mobile name input (on-screen keyboard buttons)
 5. Test share buttons at mobile size
+
+### Phase 4.5: Animation & Motion Audit
+1. On every screen (menu, gameplay, game over, victory), take TWO screenshots 2-3 seconds apart
+2. Compare them — identify any elements that move, pulse, fade, or animate
+3. For each moving element, evaluate:
+   - **Intentional?** Does this animation serve a purpose (draw attention, convey state)?
+   - **Contained?** Does the animation affect ONLY the intended element, or does it cascade to child/sibling elements via shared position variables?
+   - **Appropriate?** Is the motion subtle or distracting? Does it cause the entire UI to feel unstable?
+4. Trace position dependencies in code when motion seems to cascade — a title bobbing shouldn't make buttons bob too
+5. Test for: floating/bobbing menus, pulsing elements that distract from primary actions, animations that make text hard to read
+
+**CRITICAL LESSON:** Static screenshots hide animation bugs. The preview tool captures single frames, making oscillation invisible. Always compare multiple frames to catch unwanted motion.
 
 ### Phase 5: Cross-Cutting Concerns
 1. Test all 3 languages:

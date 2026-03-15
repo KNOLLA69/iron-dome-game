@@ -7,7 +7,29 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
-<title>כיפת ברזל - הגנה על ישראל</title>
+
+<!-- SEO -->
+<title>Iron Dome Game — Defend Israel | כיפת ברזל</title>
+<meta name="description" content="Defend Israeli cities from incoming missiles in this free browser game. 15 waves, 5 cities, 4 enemy types. No download required — play instantly.">
+
+<!-- Open Graph (Facebook, WhatsApp, Discord, LinkedIn) -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://iron-dome-game.com/">
+<meta property="og:title" content="Iron Dome — Can You Defend All 5 Cities?">
+<meta property="og:description" content="Free browser missile defense game. Intercept rockets, drones, and ballistic missiles across 15 waves. No download — play now.">
+<meta property="og:image" content="https://iron-dome-game.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="he_IL">
+<meta property="og:locale:alternate" content="de_DE">
+<meta property="og:site_name" content="Iron Dome Game">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Iron Dome — Can You Defend All 5 Cities?">
+<meta name="twitter:description" content="Free browser missile defense game. 15 waves, 5 cities, 4 enemy types. Play instantly — no download.">
+<meta name="twitter:image" content="https://iron-dome-game.com/og-image.png">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
@@ -4451,7 +4473,8 @@ function drawMenu() {
   const bigBtnH = fz(55);
   // Vertically center menu content
   const totalMenuH = fz(38) + fz(22) + fz(42) + (highScore > 0 ? fz(18) : 0) + fz(6) + bigBtnH*3 + fz(10)*2 + fz(18) + fz(28) + fz(14) + fz(14) + fz(40) + fz(12) + fz(30);
-  let curY = Math.max(fz(40), (H - totalMenuH) / 2);
+  const langToggleBottom = fz(10) + fz(42) + fz(12);
+  let curY = Math.max(langToggleBottom, (H - totalMenuH) / 2);
 
   // Title with glow
   const titleY = curY;
