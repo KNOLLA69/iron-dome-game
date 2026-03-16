@@ -179,32 +179,34 @@ const CITIES = [
     id: 'nahariya', endurance: 5,
     name: { he: '\u05E0\u05D4\u05E8\u05D9\u05D4', en: 'Nahariya', de: 'Naharija' },
     waves: [1, 2, 3],
-    bgHeightRange: [20, 50],
+    bgHeightRange: [25, 55],
     buildings: {
       mid: [
-        { x: 30, w: 40, h: 65, color: [55, 52, 48] },
-        { x: 90, w: 35, h: 80, color: [50, 48, 45] },
-        { x: 140, w: 50, h: 55, color: [58, 55, 50] },
-        { x: 210, w: 30, h: 95, color: [52, 50, 46] },
-        { x: 260, w: 45, h: 60, color: [55, 52, 48] },
-        { x: 330, w: 35, h: 75, color: [48, 46, 42] },
-        { x: 400, w: 55, h: 50, color: [56, 53, 49] },
-        { x: 480, w: 30, h: 85, color: [50, 48, 44] },
-        { x: 530, w: 45, h: 55, color: [54, 51, 47] },
-        { x: 620, w: 40, h: 70, color: [52, 50, 46] },
-        { x: 680, w: 50, h: 50, color: [57, 54, 50] },
-        { x: 750, w: 35, h: 90, color: [50, 48, 44] },
-        { x: 820, w: 45, h: 60, color: [55, 52, 48] },
-        { x: 880, w: 30, h: 75, color: [48, 46, 42] },
+        // Small Mediterranean town — mostly 2-3 story cream/white buildings
+        { x: 30, w: 38, h: 45, color: [225, 215, 195] },
+        { x: 85, w: 32, h: 55, color: [210, 200, 180] },
+        { x: 135, w: 45, h: 40, color: [220, 210, 190] },
+        { x: 200, w: 28, h: 60, color: [215, 205, 185] },
+        { x: 250, w: 42, h: 48, color: [230, 220, 200] },
+        { x: 315, w: 34, h: 52, color: [205, 195, 175] },
+        { x: 375, w: 50, h: 38, color: [225, 215, 195] },
+        { x: 450, w: 30, h: 58, color: [210, 200, 180] },
+        { x: 500, w: 40, h: 42, color: [220, 210, 190] },
+        { x: 570, w: 36, h: 50, color: [215, 205, 185] },
+        { x: 640, w: 44, h: 35, color: [230, 220, 200] },
+        { x: 710, w: 32, h: 55, color: [210, 200, 180] },
+        { x: 770, w: 40, h: 45, color: [220, 210, 190] },
+        { x: 840, w: 28, h: 50, color: [215, 205, 185] },
+        { x: 900, w: 36, h: 40, color: [225, 215, 195] },
       ],
       landmarks: [
-        // Lighthouse on the right
-        { x: 970, w: 22, h: 160, color: [220, 220, 210], shape: 'lighthouse' },
-        // Beach hotels
-        { x: 560, w: 55, h: 100, color: [60, 57, 52] },
-        { x: 380, w: 48, h: 90, color: [58, 55, 50] },
+        // Nahariya water tower — the city's iconic symbol
+        { x: 480, w: 24, h: 130, color: [240, 235, 225], shape: 'watertower' },
+        // Beach resort hotels (white/cream Mediterranean style)
+        { x: 150, w: 52, h: 70, color: [235, 225, 210], shape: 'rect' },
+        { x: 720, w: 48, h: 65, color: [230, 220, 205], shape: 'rect' },
       ],
-      foreground: { color: [55, 52, 48], maxH: 25 }
+      foreground: { color: [200, 190, 170], maxH: 20 }
     }
   },
   {
@@ -883,6 +885,90 @@ function drawBuilding(x, w, h, opts = {}) {
     cctx.fillStyle = `rgba(${base[0]+20},${base[1]+20},${base[2]+20}, 0.5)`;
     cctx.fillRect(x, towerY, w, 2);
     return; // Skip default windows
+  } else if (opts.shape === 'watertower') {
+    // Nahariya Water Tower — white octagonal landmark (1936), city symbol
+    const shaftW = w * 0.45;
+    const shaftX = x + (w - shaftW) / 2;
+    const tankH = h * 0.22;
+    const tankW = w * 0.75;
+    const tankX = x + (w - tankW) / 2;
+    const capH = h * 0.1;
+    const shaftTop = y + capH + tankH;
+    // Shaft — slightly tapered white cylinder
+    const shaftBotW = shaftW * 1.1;
+    cctx.fillStyle = `rgb(${base[0]},${base[1]},${base[2]})`;
+    cctx.beginPath();
+    cctx.moveTo(shaftX - (shaftBotW - shaftW)/2, GROUND_Y);
+    cctx.lineTo(shaftX, shaftTop);
+    cctx.lineTo(shaftX + shaftW, shaftTop);
+    cctx.lineTo(shaftX + shaftW + (shaftBotW - shaftW)/2, GROUND_Y);
+    cctx.closePath();
+    cctx.fill();
+    // Shaft shadow gradient
+    const shaftGrad = cctx.createLinearGradient(shaftX, shaftTop, shaftX + shaftW, shaftTop);
+    shaftGrad.addColorStop(0, 'rgba(0,0,0,0.05)');
+    shaftGrad.addColorStop(0.7, 'rgba(0,0,0,0)');
+    shaftGrad.addColorStop(1, 'rgba(0,0,0,0.12)');
+    cctx.fillStyle = shaftGrad;
+    cctx.fillRect(shaftX, shaftTop, shaftW, GROUND_Y - shaftTop);
+    // Window slits on shaft
+    cctx.fillStyle = 'rgba(60, 80, 100, 0.3)';
+    for (let wy = shaftTop + 15; wy < GROUND_Y - 20; wy += 25) {
+      cctx.fillRect(shaftX + shaftW*0.35, wy, shaftW*0.3, 8);
+    }
+    // Tank section — wider octagonal/rectangular with slight overhang
+    cctx.fillStyle = `rgb(${base[0]-5},${base[1]-5},${base[2]-5})`;
+    cctx.fillRect(tankX, y + capH, tankW, tankH);
+    // Tank bottom bevel
+    cctx.beginPath();
+    cctx.moveTo(tankX, y + capH + tankH);
+    cctx.lineTo(shaftX, y + capH + tankH + 6);
+    cctx.lineTo(shaftX + shaftW, y + capH + tankH + 6);
+    cctx.lineTo(tankX + tankW, y + capH + tankH);
+    cctx.closePath();
+    cctx.fill();
+    // Tank horizontal bands
+    cctx.strokeStyle = `rgba(${base[0]-25},${base[1]-25},${base[2]-25}, 0.2)`;
+    cctx.lineWidth = 0.6;
+    for (let ty = y + capH + 4; ty < y + capH + tankH; ty += 5) {
+      cctx.beginPath();
+      cctx.moveTo(tankX, ty);
+      cctx.lineTo(tankX + tankW, ty);
+      cctx.stroke();
+    }
+    // Observation railing
+    cctx.strokeStyle = 'rgba(100,100,100,0.4)';
+    cctx.lineWidth = 0.8;
+    cctx.beginPath();
+    cctx.moveTo(tankX - 2, y + capH);
+    cctx.lineTo(tankX - 2, y + capH - 5);
+    cctx.lineTo(tankX + tankW + 2, y + capH - 5);
+    cctx.lineTo(tankX + tankW + 2, y + capH);
+    cctx.stroke();
+    // Railing posts
+    for (let rx = tankX; rx <= tankX + tankW; rx += tankW/4) {
+      cctx.beginPath();
+      cctx.moveTo(rx, y + capH);
+      cctx.lineTo(rx, y + capH - 5);
+      cctx.stroke();
+    }
+    // Conical red/terracotta cap
+    cctx.fillStyle = 'rgba(160, 75, 50, 0.85)';
+    cctx.beginPath();
+    cctx.moveTo(x + w/2, y);
+    cctx.lineTo(tankX - 1, y + capH + 1);
+    cctx.lineTo(tankX + tankW + 1, y + capH + 1);
+    cctx.closePath();
+    cctx.fill();
+    // Cap highlight
+    cctx.fillStyle = 'rgba(190, 100, 70, 0.3)';
+    cctx.beginPath();
+    cctx.moveTo(x + w/2, y + 2);
+    cctx.lineTo(tankX + tankW*0.3, y + capH);
+    cctx.lineTo(x + w/2, y + capH);
+    cctx.closePath();
+    cctx.fill();
+    return; // Skip default windows
   } else if (opts.shape === 'dome') {
     // Dome silhouette - half circle on rectangular base
     const baseH = h * 0.35;
@@ -1349,6 +1435,57 @@ function generateCityCanvas(city) {
   const bldgs = city.buildings;
   const bgRange = city.bgHeightRange || [30, 60];
 
+  // -- Nahariya: Western Galilee hills + palm trees --
+  if (city.id === 'nahariya') {
+    // Gentle green hills in background (Western Galilee)
+    const hillGradN = cctx.createLinearGradient(0, GROUND_Y - 60, 0, GROUND_Y);
+    hillGradN.addColorStop(0, 'rgba(40, 65, 35, 0.7)');
+    hillGradN.addColorStop(1, 'rgba(45, 55, 35, 0.5)');
+    cctx.fillStyle = hillGradN;
+    cctx.beginPath();
+    cctx.moveTo(0, GROUND_Y);
+    cctx.lineTo(0, GROUND_Y - 30);
+    cctx.quadraticCurveTo(W * 0.15, GROUND_Y - 55, W * 0.3, GROUND_Y - 40);
+    cctx.quadraticCurveTo(W * 0.5, GROUND_Y - 60, W * 0.7, GROUND_Y - 35);
+    cctx.quadraticCurveTo(W * 0.85, GROUND_Y - 50, W, GROUND_Y - 30);
+    cctx.lineTo(W, GROUND_Y);
+    cctx.closePath();
+    cctx.fill();
+    // Palm trees scattered across the skyline
+    const palmSeeds = [0.05, 0.15, 0.28, 0.42, 0.52, 0.65, 0.72, 0.82, 0.93];
+    palmSeeds.forEach(px => {
+      const palmX = px * W;
+      const trunkH = 35 + Math.abs(Math.sin(px * 37)) * 25;
+      const palmBase = GROUND_Y - 8;
+      const palmTop = palmBase - trunkH;
+      // Trunk — thin brown curved line
+      cctx.strokeStyle = `rgba(${90 + Math.floor(Math.sin(px*19)*15)}, ${65 + Math.floor(Math.sin(px*23)*10)}, ${40}, 0.7)`;
+      cctx.lineWidth = 2.5;
+      cctx.beginPath();
+      cctx.moveTo(palmX, palmBase);
+      const lean = Math.sin(px * 47) * 8;
+      cctx.quadraticCurveTo(palmX + lean * 0.5, palmBase - trunkH * 0.5, palmX + lean, palmTop);
+      cctx.stroke();
+      // Fronds — fan of curved lines from top
+      const frondTop = palmTop;
+      const frondX = palmX + lean;
+      cctx.strokeStyle = `rgba(${30 + Math.floor(Math.sin(px*13)*10)}, ${70 + Math.floor(Math.sin(px*17)*15)}, ${25}, 0.75)`;
+      cctx.lineWidth = 1.5;
+      const frondAngles = [-2.2, -1.6, -1.0, -0.4, 0.3, 0.9, 1.5, 2.1];
+      frondAngles.forEach(angle => {
+        const frondLen = 12 + Math.abs(Math.sin(angle * 3)) * 8;
+        cctx.beginPath();
+        cctx.moveTo(frondX, frondTop);
+        const endX = frondX + Math.cos(angle) * frondLen;
+        const endY = frondTop + Math.sin(angle) * frondLen * 0.6 - 2;
+        const cpX = frondX + Math.cos(angle) * frondLen * 0.6;
+        const cpY = frondTop + Math.sin(angle) * frondLen * 0.3 - 5;
+        cctx.quadraticCurveTo(cpX, cpY, endX, endY);
+        cctx.stroke();
+      });
+    });
+  }
+
   // -- Haifa: Mount Carmel hillside backdrop --
   if (city.id === 'haifa') {
     // Green hillside rising from left (port) to right (Carmel ridge)
@@ -1399,6 +1536,46 @@ function generateCityCanvas(city) {
 
   // -- Landmark buildings --
   bldgs.landmarks.forEach(b => drawBuilding(b.x * sx, b.w * sx, b.h, b));
+
+  // -- Nahariya: sandy beach foreground --
+  if (city.id === 'nahariya') {
+    // Sandy beach strip
+    const beachTop = GROUND_Y - 18;
+    const beachGrad = cctx.createLinearGradient(0, beachTop, 0, GROUND_Y + 5);
+    beachGrad.addColorStop(0, 'rgba(210, 185, 140, 0.6)');
+    beachGrad.addColorStop(0.5, 'rgba(225, 200, 155, 0.7)');
+    beachGrad.addColorStop(1, 'rgba(195, 170, 125, 0.5)');
+    cctx.fillStyle = beachGrad;
+    cctx.fillRect(0, beachTop, W, GROUND_Y - beachTop + 5);
+
+    // Beach texture — scattered dots
+    for (let i = 0; i < 60; i++) {
+      const bx = Math.random() * W;
+      const by = beachTop + Math.random() * (GROUND_Y - beachTop);
+      cctx.fillStyle = `rgba(${180 + Math.random()*40}, ${160 + Math.random()*30}, ${110 + Math.random()*30}, ${0.2 + Math.random()*0.3})`;
+      cctx.fillRect(bx, by, 2 + Math.random()*2, 1 + Math.random()*1.5);
+    }
+
+    // Beach umbrellas (small silhouettes)
+    const umbrellaXs = [0.12, 0.35, 0.58, 0.78];
+    umbrellaXs.forEach(ux => {
+      const uxp = ux * W + (Math.random() - 0.5) * 20;
+      const uy = GROUND_Y - 10 - Math.random() * 5;
+      // Pole
+      cctx.strokeStyle = 'rgba(120, 100, 70, 0.5)';
+      cctx.lineWidth = 1.5;
+      cctx.beginPath();
+      cctx.moveTo(uxp, uy + 8);
+      cctx.lineTo(uxp, uy - 6);
+      cctx.stroke();
+      // Canopy
+      const colors = ['rgba(200, 60, 60, 0.4)', 'rgba(60, 100, 200, 0.4)', 'rgba(220, 180, 40, 0.4)', 'rgba(60, 180, 100, 0.4)'];
+      cctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+      cctx.beginPath();
+      cctx.arc(uxp, uy - 6, 8, Math.PI, 0);
+      cctx.fill();
+    });
+  }
 
   // -- Foreground low buildings --
   const fg = bldgs.foreground;
