@@ -326,40 +326,41 @@ const CITIES = [
     id: 'telaviv', endurance: 10,
     name: { he: '\u05EA\u05DC \u05D0\u05D1\u05D9\u05D1', en: 'Tel Aviv', de: 'Tel Aviv' },
     waves: [13, 14, 15],
-    bgHeightRange: [30, 60],
+    bgHeightRange: [35, 70],
     buildings: {
       mid: [
-        { x: 20, w: 28, h: 120, color: [35, 42, 62] },
-        { x: 55, w: 35, h: 90, color: [38, 45, 65] },
-        { x: 100, w: 22, h: 150, color: [42, 48, 68], antenna: true },
-        { x: 130, w: 40, h: 100, color: [36, 43, 63] },
-        { x: 180, w: 25, h: 170, color: [40, 47, 67], antenna: true },
-        { x: 215, w: 50, h: 80, color: [34, 40, 60] },
-        { x: 700, w: 30, h: 140, color: [38, 44, 64], antenna: true },
-        { x: 740, w: 45, h: 95, color: [35, 42, 62] },
-        { x: 800, w: 25, h: 160, color: [40, 46, 66] },
-        { x: 835, w: 35, h: 110, color: [36, 43, 63] },
-        { x: 880, w: 28, h: 130, color: [38, 45, 65], antenna: true },
-        { x: 920, w: 50, h: 85, color: [34, 40, 60] },
-        { x: 980, w: 30, h: 145, color: [40, 47, 67] },
-        { x: 1020, w: 40, h: 100, color: [36, 42, 62] },
-        { x: 1065, w: 25, h: 120, color: [38, 44, 64], antenna: true },
+        // Dense modern skyline — warm glass/concrete tones
+        { x: 20, w: 30, h: 130, color: [65, 85, 105] },
+        { x: 58, w: 36, h: 100, color: [70, 90, 110], antenna: true },
+        { x: 105, w: 24, h: 160, color: [60, 80, 100] },
+        { x: 140, w: 42, h: 110, color: [75, 95, 115] },
+        { x: 195, w: 28, h: 180, color: [65, 85, 105], antenna: true },
+        { x: 235, w: 48, h: 90, color: [70, 88, 108] },
+        { x: 700, w: 32, h: 150, color: [68, 88, 108], antenna: true },
+        { x: 745, w: 44, h: 105, color: [72, 92, 112] },
+        { x: 800, w: 26, h: 170, color: [62, 82, 102] },
+        { x: 840, w: 38, h: 120, color: [75, 95, 115] },
+        { x: 890, w: 30, h: 145, color: [65, 85, 105], antenna: true },
+        { x: 930, w: 48, h: 95, color: [70, 90, 110] },
+        { x: 990, w: 32, h: 155, color: [68, 88, 108] },
+        { x: 1035, w: 42, h: 110, color: [72, 92, 112], antenna: true },
       ],
       landmarks: [
-        // Azrieli Center
-        { x: 370, w: 48, h: 260, color: [50, 60, 85], shape: 'rect' },
-        { x: 425, w: 44, h: 290, color: [55, 65, 90], shape: 'round' },
-        { x: 478, w: 46, h: 250, color: [48, 58, 82], shape: 'triangle' },
-        // Shalom Tower area
-        { x: 280, w: 38, h: 200, color: [45, 52, 72], antenna: true },
-        { x: 325, w: 30, h: 150, color: [40, 48, 68] },
-        // Modern towers (Sarona area)
-        { x: 545, w: 32, h: 220, color: [52, 62, 85], shape: 'spire' },
-        { x: 585, w: 40, h: 180, color: [48, 56, 78] },
-        { x: 635, w: 28, h: 240, color: [55, 65, 88], antenna: true },
-        { x: 670, w: 35, h: 160, color: [44, 52, 74] },
+        // Azrieli Center — iconic three towers (blue-green glass)
+        { x: 380, w: 50, h: 270, color: [55, 90, 120], shape: 'rect' },
+        { x: 438, w: 46, h: 300, color: [60, 100, 130], shape: 'round' },
+        { x: 492, w: 48, h: 260, color: [50, 85, 115], shape: 'triangle' },
+        // Shalom Meir Tower (first skyscraper, white concrete)
+        { x: 290, w: 36, h: 210, color: [180, 175, 165], antenna: true },
+        // Midtown Tower (sleek dark glass)
+        { x: 340, w: 30, h: 190, color: [55, 65, 80] },
+        // ToHa towers (Sarona area, modern glass)
+        { x: 555, w: 34, h: 240, color: [70, 105, 135], shape: 'spire' },
+        { x: 600, w: 42, h: 200, color: [65, 95, 125] },
+        // Electra Tower
+        { x: 650, w: 30, h: 250, color: [75, 100, 130], antenna: true },
       ],
-      foreground: { color: [55, 52, 48], maxH: 30 }
+      foreground: { color: [210, 200, 185], maxH: 25 }
     }
   }
 ];
@@ -1522,6 +1523,30 @@ function generateCityCanvas(city) {
       cctx.closePath();
       cctx.fill();
     });
+  }
+
+  // -- Tel Aviv: Mediterranean beachfront promenade --
+  if (city.id === 'telaviv') {
+    // Warm sandy beach strip behind buildings
+    const beachY = GROUND_Y - 12;
+    const bGrad = cctx.createLinearGradient(0, beachY, 0, GROUND_Y + 3);
+    bGrad.addColorStop(0, 'rgba(220, 195, 150, 0.5)');
+    bGrad.addColorStop(1, 'rgba(200, 175, 130, 0.4)');
+    cctx.fillStyle = bGrad;
+    cctx.fillRect(0, beachY, W, GROUND_Y - beachY + 3);
+
+    // Promenade railing (tayelet) — thin line along beach
+    cctx.strokeStyle = 'rgba(160, 150, 130, 0.5)';
+    cctx.lineWidth = 1.5;
+    cctx.beginPath();
+    cctx.moveTo(0, beachY + 2);
+    cctx.lineTo(W, beachY + 2);
+    cctx.stroke();
+    // Railing posts
+    for (let px = 20; px < W; px += 35 + Math.random() * 15) {
+      cctx.fillStyle = 'rgba(140, 130, 115, 0.5)';
+      cctx.fillRect(px, beachY - 2, 2, 6);
+    }
   }
 
   // -- Far background buildings (silhouettes) --
@@ -5274,7 +5299,7 @@ function resize() {
     canvas.style.width = vw + 'px';
     canvas.style.height = vh + 'px';
   } else {
-    const scale = Math.max(vw / W, vh / H);
+    const scale = Math.min(vw / W, vh / H);
     canvas.style.width = (W * scale) + 'px';
     canvas.style.height = (H * scale) + 'px';
   }
