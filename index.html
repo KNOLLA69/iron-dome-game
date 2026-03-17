@@ -213,34 +213,36 @@ const CITIES = [
     id: 'beersheva', endurance: 6,
     name: { he: '\u05D1\u05D0\u05E8 \u05E9\u05D1\u05E2', en: 'Beer Sheva', de: 'Beer Scheva' },
     waves: [4, 5, 6],
-    bgHeightRange: [20, 55],
+    bgHeightRange: [20, 50],
     buildings: {
       mid: [
-        { x: 30, w: 35, h: 100, color: [60, 55, 45] },
-        { x: 80, w: 50, h: 75, color: [55, 50, 42] },
-        { x: 150, w: 28, h: 130, color: [58, 53, 44], antenna: true },
-        { x: 200, w: 60, h: 85, color: [52, 48, 40] },
-        { x: 500, w: 40, h: 110, color: [56, 51, 43] },
-        { x: 560, w: 35, h: 80, color: [60, 55, 45] },
-        { x: 750, w: 30, h: 120, color: [54, 50, 42], antenna: true },
-        { x: 800, w: 45, h: 90, color: [58, 53, 44] },
-        { x: 860, w: 35, h: 70, color: [52, 48, 40] },
-        { x: 920, w: 50, h: 95, color: [56, 51, 43] },
-        { x: 990, w: 28, h: 105, color: [60, 55, 45] },
-        { x: 1040, w: 40, h: 80, color: [54, 50, 42] },
+        // Negev desert city — sandy ochre/tan concrete
+        { x: 30, w: 38, h: 85, color: [190, 170, 130] },
+        { x: 82, w: 48, h: 65, color: [180, 160, 120] },
+        { x: 148, w: 30, h: 110, color: [185, 165, 125], antenna: true },
+        { x: 198, w: 55, h: 75, color: [175, 155, 115] },
+        { x: 500, w: 42, h: 95, color: [188, 168, 128] },
+        { x: 558, w: 36, h: 70, color: [182, 162, 122] },
+        { x: 750, w: 32, h: 105, color: [178, 158, 118], antenna: true },
+        { x: 800, w: 46, h: 80, color: [185, 165, 125] },
+        { x: 860, w: 38, h: 60, color: [175, 155, 115] },
+        { x: 915, w: 50, h: 85, color: [190, 170, 130] },
+        { x: 985, w: 30, h: 95, color: [182, 162, 122] },
+        { x: 1035, w: 42, h: 70, color: [178, 158, 118] },
       ],
       landmarks: [
-        // BGU iconic building - wide modern
-        { x: 350, w: 120, h: 180, color: [65, 60, 48], shape: 'rect' },
-        // BGU tower behind
-        { x: 310, w: 30, h: 200, color: [58, 53, 44], shape: 'spire' },
-        // IDF base silhouette (flat wide)
-        { x: 620, w: 110, h: 50, color: [45, 42, 36] },
-        // Desert residential towers
-        { x: 700, w: 35, h: 155, color: [60, 55, 45], antenna: true },
-        { x: 270, w: 28, h: 140, color: [55, 50, 42] },
+        // BGU — Kreitman building (wide brutalist concrete)
+        { x: 360, w: 125, h: 160, color: [165, 150, 120], shape: 'rect' },
+        // BGU tower (spire)
+        { x: 315, w: 32, h: 190, color: [158, 142, 112], shape: 'spire' },
+        // Soroka Medical Center (flat wide)
+        { x: 620, w: 115, h: 55, color: [195, 185, 165] },
+        // Rambam Tower (new residential)
+        { x: 700, w: 36, h: 145, color: [188, 168, 128], antenna: true },
+        // Old city area tower
+        { x: 270, w: 30, h: 130, color: [180, 160, 120] },
       ],
-      foreground: { color: [60, 55, 45], maxH: 30 }
+      foreground: { color: [175, 160, 125], maxH: 25 }
     }
   },
   {
@@ -288,38 +290,41 @@ const CITIES = [
     id: 'jerusalem', endurance: 8,
     name: { he: '\u05D9\u05E8\u05D5\u05E9\u05DC\u05D9\u05DD', en: 'Jerusalem', de: 'Jerusalem' },
     waves: [10, 11, 12],
-    bgHeightRange: [25, 65],
+    bgHeightRange: [30, 70],
     buildings: {
       mid: [
-        { x: 20, w: 30, h: 120, color: [65, 60, 50] },
-        { x: 60, w: 40, h: 90, color: [60, 55, 48], antenna: true },
-        { x: 110, w: 35, h: 150, color: [62, 57, 49] },
-        { x: 160, w: 50, h: 100, color: [58, 54, 46] },
-        { x: 680, w: 30, h: 140, color: [64, 59, 50] },
-        { x: 720, w: 45, h: 110, color: [60, 55, 48] },
-        { x: 780, w: 28, h: 160, color: [62, 57, 49], antenna: true },
-        { x: 820, w: 40, h: 95, color: [58, 54, 46] },
-        { x: 880, w: 35, h: 130, color: [64, 59, 50] },
-        { x: 930, w: 50, h: 85, color: [60, 55, 48] },
-        { x: 990, w: 28, h: 145, color: [62, 57, 49] },
-        { x: 1040, w: 35, h: 105, color: [58, 54, 46], antenna: true },
+        // West Jerusalem — warm Jerusalem stone (honey/golden limestone)
+        { x: 20, w: 32, h: 110, color: [195, 175, 140] },
+        { x: 65, w: 42, h: 85, color: [185, 165, 130], antenna: true },
+        { x: 120, w: 36, h: 140, color: [190, 170, 135] },
+        { x: 170, w: 48, h: 95, color: [180, 160, 125] },
+        { x: 230, w: 30, h: 125, color: [195, 175, 140] },
+        // East side — stone residential
+        { x: 680, w: 32, h: 130, color: [188, 168, 132] },
+        { x: 725, w: 44, h: 100, color: [192, 172, 138] },
+        { x: 785, w: 30, h: 150, color: [182, 162, 128], antenna: true },
+        { x: 830, w: 40, h: 90, color: [196, 176, 142] },
+        { x: 885, w: 36, h: 120, color: [186, 166, 130] },
+        { x: 935, w: 48, h: 80, color: [190, 170, 135] },
+        { x: 1000, w: 30, h: 135, color: [184, 164, 128] },
+        { x: 1045, w: 38, h: 100, color: [192, 172, 138], antenna: true },
       ],
       landmarks: [
-        // Old city walls (wide, central-left)
-        { x: 280, w: 200, h: 70, color: [75, 68, 55], shape: 'wall' },
-        // Tower of David
-        { x: 250, w: 25, h: 170, color: [70, 64, 52], shape: 'rect', antenna: true },
-        // Dome (architectural shape, no religious symbols)
-        { x: 370, w: 70, h: 120, color: [185, 165, 80], shape: 'dome' },
-        // Knesset (wide classical)
-        { x: 550, w: 100, h: 80, color: [72, 66, 56] },
-        // Modern Jerusalem towers behind old city
-        { x: 320, w: 30, h: 210, color: [68, 62, 52], shape: 'spire' },
-        { x: 450, w: 28, h: 190, color: [65, 60, 50] },
-        // Chords Bridge suggestion (thin tall with cable)
-        { x: 630, w: 8, h: 230, color: [200, 200, 210], antenna: true },
+        // Old city walls (wide, central-left, warm limestone)
+        { x: 300, w: 220, h: 75, color: [180, 160, 110], shape: 'wall' },
+        // Tower of David (Citadel)
+        { x: 270, w: 28, h: 180, color: [170, 150, 105], shape: 'rect', antenna: true },
+        // Dome of the Rock (golden dome, architectural)
+        { x: 390, w: 75, h: 130, color: [210, 185, 70], shape: 'dome' },
+        // Knesset (wide classical, white limestone)
+        { x: 560, w: 105, h: 85, color: [210, 200, 185] },
+        // Modern towers (Holyland, etc.)
+        { x: 340, w: 32, h: 220, color: [175, 155, 120], shape: 'spire' },
+        { x: 470, w: 30, h: 200, color: [170, 150, 115] },
+        // Chords Bridge (Calatrava) — white cables
+        { x: 640, w: 10, h: 240, color: [220, 220, 225], antenna: true },
       ],
-      foreground: { color: [65, 60, 50], maxH: 30 }
+      foreground: { color: [185, 168, 135], maxH: 28 }
     }
   },
   {
@@ -1484,6 +1489,82 @@ function generateCityCanvas(city) {
         cctx.quadraticCurveTo(cpX, cpY, endX, endY);
         cctx.stroke();
       });
+    });
+  }
+
+  // -- Beer Sheva: Negev desert landscape --
+  if (city.id === 'beersheva') {
+    // Flat desert horizon — sandy dunes
+    const desertGrad = cctx.createLinearGradient(0, GROUND_Y - 60, 0, GROUND_Y);
+    desertGrad.addColorStop(0, 'rgba(200, 175, 120, 0.7)');
+    desertGrad.addColorStop(0.5, 'rgba(190, 165, 110, 0.8)');
+    desertGrad.addColorStop(1, 'rgba(175, 150, 100, 0.6)');
+    cctx.fillStyle = desertGrad;
+    cctx.beginPath();
+    cctx.moveTo(0, GROUND_Y);
+    cctx.lineTo(0, GROUND_Y - 25);
+    // Gentle rolling dunes
+    cctx.quadraticCurveTo(W * 0.15, GROUND_Y - 45, W * 0.3, GROUND_Y - 30);
+    cctx.quadraticCurveTo(W * 0.5, GROUND_Y - 55, W * 0.7, GROUND_Y - 35);
+    cctx.quadraticCurveTo(W * 0.85, GROUND_Y - 50, W, GROUND_Y - 28);
+    cctx.lineTo(W, GROUND_Y);
+    cctx.closePath();
+    cctx.fill();
+
+    // Scattered desert scrub
+    for (let i = 0; i < 20; i++) {
+      const sx2 = Math.random() * W;
+      const sy = GROUND_Y - 20 - Math.random() * 30;
+      cctx.fillStyle = `rgba(${100 + Math.random()*30}, ${110 + Math.random()*25}, ${60 + Math.random()*20}, ${0.3 + Math.random()*0.3})`;
+      cctx.beginPath();
+      cctx.ellipse(sx2, sy, 3 + Math.random()*4, 2 + Math.random()*2, 0, 0, Math.PI * 2);
+      cctx.fill();
+    }
+  }
+
+  // -- Jerusalem: Judean hills backdrop --
+  if (city.id === 'jerusalem') {
+    // Rolling Judean hills — golden/olive tones
+    const hillGrad = cctx.createLinearGradient(0, GROUND_Y - 120, 0, GROUND_Y);
+    hillGrad.addColorStop(0, 'rgba(140, 130, 90, 0.8)');
+    hillGrad.addColorStop(0.5, 'rgba(130, 120, 80, 0.75)');
+    hillGrad.addColorStop(1, 'rgba(120, 110, 75, 0.6)');
+    cctx.fillStyle = hillGrad;
+    cctx.beginPath();
+    cctx.moveTo(0, GROUND_Y);
+    cctx.lineTo(0, GROUND_Y - 50);
+    // Undulating hills
+    cctx.quadraticCurveTo(W * 0.12, GROUND_Y - 90, W * 0.25, GROUND_Y - 60);
+    cctx.quadraticCurveTo(W * 0.4, GROUND_Y - 100, W * 0.55, GROUND_Y - 70);
+    cctx.quadraticCurveTo(W * 0.7, GROUND_Y - 110, W * 0.85, GROUND_Y - 75);
+    cctx.quadraticCurveTo(W * 0.95, GROUND_Y - 95, W, GROUND_Y - 55);
+    cctx.lineTo(W, GROUND_Y);
+    cctx.closePath();
+    cctx.fill();
+
+    // Cypress and olive trees on hills
+    const jTreeSeeds = [0.08, 0.18, 0.32, 0.45, 0.58, 0.68, 0.78, 0.88, 0.95];
+    jTreeSeeds.forEach(tx => {
+      const treeX = tx * W;
+      const t1 = Math.sin(tx * Math.PI * 3) * 20;
+      const treeBase = GROUND_Y - 55 - Math.abs(t1) - Math.sin(tx * 7) * 15;
+      // Cypress — dark narrow triangles
+      if (Math.sin(tx * 41) > 0) {
+        const treeH = 16 + Math.abs(Math.sin(tx * 23)) * 10;
+        cctx.fillStyle = `rgba(${35 + Math.floor(Math.sin(tx*19)*10)}, ${55 + Math.floor(Math.sin(tx*13)*10)}, ${30}, 0.7)`;
+        cctx.beginPath();
+        cctx.moveTo(treeX, treeBase - treeH);
+        cctx.lineTo(treeX - 3, treeBase);
+        cctx.lineTo(treeX + 3, treeBase);
+        cctx.closePath();
+        cctx.fill();
+      } else {
+        // Olive tree — round canopy
+        cctx.fillStyle = `rgba(${70 + Math.floor(Math.sin(tx*17)*15)}, ${85 + Math.floor(Math.sin(tx*11)*10)}, ${50}, 0.6)`;
+        cctx.beginPath();
+        cctx.arc(treeX, treeBase - 5, 5 + Math.random()*3, 0, Math.PI * 2);
+        cctx.fill();
+      }
     });
   }
 
