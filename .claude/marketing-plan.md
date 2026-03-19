@@ -37,9 +37,9 @@ _Make the game viral-ready. Every play session should create a share opportunity
 
 | # | Tactic | Status | Notes |
 |---|--------|--------|-------|
-| M6 | Include score in share text ("I scored 2,450 on Iron Dome!") | 🔴 NOT STARTED | Current share text is generic, no score. Huge missed opportunity. |
-| M7 | Share prompt after game over | 🔴 NOT STARTED | Nudge to share when emotions are high. "Share your score" button on game over screen. |
-| M8 | Share prompt after victory | 🔴 NOT STARTED | Victory is rare and exciting — perfect share moment. "I defended Israel!" |
+| M6 | Include score in share text ("I scored 2,450 on Iron Dome!") | ✅ DONE | DECISION-045. `getShareText()` generates score-embedded text in all 3 languages. Game over: "I scored X points... Can you beat me?" Victory: "I defended all 5 cities... X points!" |
+| M7 | Share prompt after game over | ✅ DONE | DECISION-045. Share buttons (WhatsApp, X, email, copy) rendered below Play Again button on game over screen. |
+| M8 | Share prompt after victory | ✅ DONE | DECISION-045. Same share row on victory screen. Victory share text uses triumphant framing. |
 | M9 | Shareable leaderboard rank | 🔴 NOT STARTED | "I'm #3 worldwide!" — link that shows the leaderboard |
 
 ---

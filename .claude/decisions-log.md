@@ -437,7 +437,21 @@
 - **Impact:** M13 partially addressed (page title already updated in DECISION-041). Sitemap and robots.txt deployed.
 - **Status:** IMPLEMENTED.
 
+### DECISION-045: Shareable Moments — Score in Share Text + Share Buttons on End Screens
+- **Date:** 2026-03-19
+- **Agent:** Marketer
+- **Context:** Share text was static ("I played Iron Dome") with no score. Share buttons only existed on the main menu — not where emotions peak (game over / victory). Every play session ended without a share prompt.
+- **Decision:** Three changes:
+  1. **Dynamic share text (M6):** `getShareText(isVictory)` generates score-embedded text. Game over: "I scored X points on Iron Dome! Can you beat me?" Victory: "I defended all 5 cities of Israel! X points!" All 3 languages.
+  2. **Game over share buttons (M7):** WhatsApp, X, email, copy below Play Again.
+  3. **Victory share buttons (M8):** Same share row on victory screen with triumph-framed text.
+  Refactored: `openShare()` utility + `drawShareButtons()` reusable renderer.
+- **Alternatives Considered:** Native Web Share API only (rejected: no desktop support), auto-open share dialog (rejected: intrusive), share only on victory (rejected: game over is more common).
+- **Rationale:** Every session now ends with a share prompt at peak emotion. Competitive framing ("Can you beat me?") creates challenge loops.
+- **Impact:** M6, M7, M8. New i18n keys: shareScore, shareVictory, shareYourScore. New functions: getShareText(), openShare(), drawShareButtons().
+- **Status:** IMPLEMENTED.
+
 > Append new decisions below this line. Always include date, context, alternatives, and rationale.
-> Number sequentially from DECISION-045 onward.
+> Number sequentially from DECISION-046 onward.
 
 ---
