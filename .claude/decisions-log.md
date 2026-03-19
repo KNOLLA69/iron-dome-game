@@ -390,7 +390,54 @@
 - **Impact:** UI-only change. No game logic. Briefed to Designer agent.
 - **Status:** BRIEF FILED (BRIEF-011). Awaiting Designer implementation.
 
+### DECISION-041: Social Preview Meta Tags (OG + Twitter Card + SEO)
+- **Date:** 2026-03-15
+- **Agent:** Marketer
+- **Context:** The game had zero Open Graph, Twitter Card, or SEO meta tags. Sharing the URL on WhatsApp, Discord, X, Facebook, or LinkedIn showed no preview — just a bare link. Google search results would show random page content instead of a proper description. This is the #1 marketing foundation gap.
+- **Decision:** Added complete OG meta tags, Twitter Card tags, and SEO meta description to `<head>`. Also changed `<title>` from Hebrew-only to bilingual ("Iron Dome Game — Defend Israel | כיפת ברזל") for international SEO.
+- **Tags added:**
+  - `og:type`, `og:url`, `og:title`, `og:description`, `og:image`, `og:image:width/height`, `og:locale` (+ alternates), `og:site_name`
+  - `twitter:card` (summary_large_image), `twitter:title`, `twitter:description`, `twitter:image`
+  - `meta name="description"` for SEO
+- **Copy approach:** Title uses curiosity hook ("Can You Defend All 5 Cities?") rather than plain description. Description leads with "Free browser" and "No download" — key conversion drivers for web games.
+- **Alternatives Considered:**
+  1. **Hebrew-only meta tags** — Rejected: limits international reach. Game supports 3 languages.
+  2. **Generic description** — Rejected: "A missile defense game" has no hook. Specifics (15 waves, 5 cities, 4 enemy types) create intrigue.
+  3. **twitter:card = summary** — Rejected: `summary_large_image` gives much more visual real estate on X feeds.
+- **Rationale:** Social previews are the single highest-leverage marketing fix. Every share becomes a mini-ad. The copy emphasizes: free, instant, no download — removing all friction barriers.
+- **Impact:** M1, M2, M4 from marketing-plan.md. Note: `og-image.png` (1200×630) does not exist yet — needs Designer to create. Brief filed (BRIEF-012).
+- **Status:** IMPLEMENTED. Tags verified via preview_eval. OG image pending.
+
+### DECISION-042: JSON-LD Structured Data (VideoGame Schema)
+- **Date:** 2026-03-19
+- **Agent:** Marketer
+- **Context:** Google Search Console and rich results require structured data to display game cards, ratings, and enhanced search listings. Without JSON-LD, search engines treat the page as generic content.
+- **Decision:** Added `<script type="application/ld+json">` with `@type: VideoGame` schema including: name, alternateName (Hebrew), description, URL, genre array, gamePlatform, playMode, isAccessibleForFree, author, and free offer.
+- **Alternatives Considered:** Microdata in HTML tags (rejected: harder to maintain in single-file app), RDFa (rejected: less Google support than JSON-LD).
+- **Rationale:** JSON-LD is Google's preferred structured data format. VideoGame schema enables rich results in search (game panels, play buttons). Zero visual impact, pure SEO benefit.
+- **Impact:** M10 from marketing-plan.md. Deployed to iron-dome-game.com.
+- **Status:** IMPLEMENTED.
+
+### DECISION-043: Embeddable Widget Mode (?embed=true)
+- **Date:** 2026-03-19
+- **Agent:** Marketer
+- **Context:** Game aggregators, bloggers, and embedding sites need a clean iframe version without external navigation (share buttons, legal links). User approved this as a distribution channel — "0 human touch" growth via passive embedding.
+- **Decision:** Added URL parameter detection (`?embed=true`). In embed mode: share buttons replaced with "Play full version at iron-dome-game.com" attribution link, legal overlay section hidden. All gameplay preserved.
+- **Alternatives Considered:** Separate embed.html file (rejected: maintenance burden for single-file game), API-based embed config (rejected: overengineered).
+- **Rationale:** Minimal code change enables maximum distribution. Any site can `<iframe src="https://iron-dome-game.com/?embed=true">` and get a clean game experience with attribution driving traffic back.
+- **Impact:** New distribution channel. Enables game aggregator submissions and blog embeds.
+- **Status:** IMPLEMENTED.
+
+### DECISION-044: SEO Infrastructure (sitemap.xml + robots.txt)
+- **Date:** 2026-03-19
+- **Agent:** Marketer
+- **Context:** Search engines need sitemap and robots.txt for proper crawling. Neither existed.
+- **Decision:** Created sitemap.xml (single URL entry for iron-dome-game.com) and robots.txt (allow all, reference sitemap). Both deployed to root.
+- **Rationale:** Table-stakes SEO. Costs nothing, improves crawl efficiency and indexing speed.
+- **Impact:** M13 partially addressed (page title already updated in DECISION-041). Sitemap and robots.txt deployed.
+- **Status:** IMPLEMENTED.
+
 > Append new decisions below this line. Always include date, context, alternatives, and rationale.
-> Number sequentially from DECISION-041 onward.
+> Number sequentially from DECISION-045 onward.
 
 ---

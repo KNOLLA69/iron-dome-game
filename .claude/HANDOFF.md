@@ -6,33 +6,49 @@
 
 ## Latest Session
 
-- **Agent:** Mechanic
-- **Date:** 2026-03-15
-- **Summary:** Implemented "irresistibility pass" — three gameplay changes to improve retention and fun factor. Decoy group size reduced (DECISION-037), combo gameplay buffs added (DECISION-039), tip jar monetization decided (DECISION-040).
+- **Agent:** Marketer
+- **Date:** 2026-03-19
+- **Summary:** Completed marketing foundation (Priority 1) and key Discovery & SEO items. Domain migrated to iron-dome-game.com. OG/Twitter Card/SEO meta tags, JSON-LD structured data, Umami analytics, embed mode, sitemap, and Reddit launch content all implemented.
 - **Key Changes:**
-  1. **Decoy group 5→3 (DECISION-037):** `const extra = 4` → `const extra = 2` in `spawnMissile()`. Smooths difficulty curve at waves 7+ where decoy inflation created hidden cliffs. Verified via preview.
-  2. **Combo gameplay buffs (DECISION-039):** New `getComboBuffs()` function returns escalating interceptor buffs at combo milestones:
-     - 3+ combo: 20% faster interceptors (speed 10→12)
-     - 6+ combo: 50% bigger blast radius (30→45px)
-     - 10+ combo: double homing range (60→120px)
-     Wired into `fireInterceptor()`, homing logic, and detonation logic. Verified via preview.
-  3. **Tip jar decision (DECISION-040):** User chose tip jar over donation/continue/ads. Brief filed for Designer (BRIEF-011).
+  1. **Domain migration:** CNAME file → iron-dome-game.com via GitHub Pages. GAME_URL updated in code. 301 redirect from old knolla69.github.io URL.
+  2. **Social preview meta tags (DECISION-041):** Full OG, Twitter Card, SEO meta description. Bilingual title. OG image pending (BRIEF-012 for Designer).
+  3. **JSON-LD structured data (DECISION-042):** VideoGame schema for rich search results.
+  4. **Umami analytics configured (M3):** Website ID set to real value. Tracking page views, game-start, game-end events.
+  5. **Embeddable widget mode (DECISION-043):** `?embed=true` URL param hides share/legal, shows attribution link. Enables game aggregator distribution.
+  6. **SEO infrastructure (DECISION-044):** sitemap.xml + robots.txt created and deployed.
+  7. **Reddit launch posts drafted (M14):** 5 subreddit-specific posts with staggered schedule at `.claude/marketing/reddit-launch-posts.md`.
+  8. **Game aggregator guide (M11):** Comprehensive submission guide at `.claude/marketing/game-aggregators.md`.
 - **Files Modified:**
-  - `index.html` — decoy extra count, new `getComboBuffs()` function, 3 wiring points
-  - `.claude/decisions-log.md` — DECISION-037 updated to IMPLEMENTED, added DECISION-039, DECISION-040
+  - `index.html` — meta tags, JSON-LD, Umami ID, GAME_URL, embed mode logic
+  - `.claude/decisions-log.md` — DECISION-041 through DECISION-044
+  - `.claude/marketing-plan.md` — M1-M4 ✅, M10 ✅, M13 ✅, M14 ✅, M16 ✅, M22 ✅, M5/M11 🟡
   - `.claude/HANDOFF.md` — This file
 - **Files Created:**
-  - `.claude/briefs/BRIEF-011-tip-jar-button.md`
-- **Blocked On:** Nothing
+  - `CNAME` — Custom domain for GitHub Pages
+  - `sitemap.xml` — SEO sitemap
+  - `robots.txt` — Crawler access rules
+  - `.claude/marketing/reddit-launch-posts.md` — 5 ready-to-post Reddit submissions
+  - `.claude/marketing/game-aggregators.md` — Aggregator submission guide
+  - `.claude/briefs/BRIEF-012-og-image.md` — P1 brief for Designer (1200×630 OG image)
+- **Blocked On:**
+  - **OG image (BRIEF-012):** Social previews won't show image until Designer creates og-image.png
+  - **HTTPS enforcement:** Certificate should be provisioned by now — user needs to enable "Enforce HTTPS" in GitHub Settings → Pages
 - **Recommended Next Action:**
-  - **For Designer:** Pick up BRIEF-010 (home page redesign) — highest priority visual improvement
-  - **For Designer:** Also pending: BRIEF-007 (endurance bar) + BRIEF-008 (crosshair) + BRIEF-009 (ammo text + button hover) + BRIEF-011 (tip jar button)
+  - **For User:** Post Reddit content (5 subs staggered per schedule). Submit to itch.io/Newgrounds/GameJolt (Tier 1 aggregators).
+  - **For Designer:** BRIEF-012 (OG image) is P1 marketing blocker. Also pending: BRIEF-007, 008, 009, 010, 011.
+  - **For Marketer:** Priority 2 viral loop mechanics (M6-M9): score in share text, share prompts on game over/victory, challenge links.
   - **For Mechanic:** Run Round 2 (Scoring + Economy: C1-C5, D1-D4)
   - **For UX Tester:** Run Round 3 (Mobile: D1-D9)
 
 ---
 
 ## Previous Sessions
+
+- **Agent:** Mechanic
+- **Date:** 2026-03-15
+- **Summary:** Implemented "irresistibility pass" — decoy group size reduced (DECISION-037), combo gameplay buffs (DECISION-039), tip jar monetization decided (DECISION-040).
+
+---
 
 - **Agent:** UX Tester
 - **Date:** 2026-03-15
