@@ -51,9 +51,7 @@ html, body {
 }
 canvas { display: block; cursor: crosshair; }
 </style>
-<!-- TODO: Replace YOUR_WEBSITE_ID with your Umami Cloud website ID -->
-<!-- Sign up at https://umami.is (free cloud tier) -->
-<script defer src="https://cloud.umami.is/script.js" data-website-id="YOUR_WEBSITE_ID"></script>
+<script defer src="https://cloud.umami.is/script.js" data-website-id="b0ce0ca8-24a3-42e5-bf10-d0a2b90634ee"></script>
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -4377,10 +4375,13 @@ function drawHUD() {
     const mult = getMultiplier();
     const pulse = 1 + Math.sin(frame*0.12)*0.04;
     const cc = combo >= 10 ? '#ff55ff' : combo >= 6 ? '#ffaa00' : '#ffdd00';
+    const comboLabel = mult > 1 ? `🔥 Streak: +${combo} · Bonus: ×${mult}` : `🔥 Streak: +${combo}`;
     ctx.save();
     ctx.translate(W/2, barH + fz(14));
     ctx.scale(pulse, pulse);
-    const pw = fz(75), ph = fz(22);
+    const tw = ctx.measureText(comboLabel).width || fz(100);
+    const pw = Math.max(fz(75), tw + fz(20)), ph = fz(22);
+    ctx.font = `bold ${fz(12)}px Arial`;
     ctx.fillStyle = 'rgba(0,5,15,0.6)';
     ctx.beginPath(); ctx.roundRect(-pw/2, -ph/2, pw, ph, 10); ctx.fill();
     ctx.strokeStyle = cc + '44';
@@ -4389,20 +4390,23 @@ function drawHUD() {
     ctx.textAlign = 'center';
     ctx.shadowColor = cc; ctx.shadowBlur = 10;
     ctx.fillStyle = cc;
-    ctx.font = `bold ${fz(14)}px Arial`;
-    ctx.fillText(`🔥 x${combo}${mult > 1 ? '  ×'+mult : ''}`, 0, fz(5));
+    ctx.font = `bold ${fz(12)}px Arial`;
+    ctx.fillText(comboLabel, 0, fz(5));
     ctx.shadowBlur = 0;
     ctx.restore();
   }
 
   // ===== BOTTOM-LEFT: Kill Tally + Accuracy =====
+  // On mobile: only show during wave transition. On desktop: always show.
   const totalKills = killCounts.rocket + killCounts.drone + killCounts.ballistic + killCounts.decoy;
-  if (totalKills > 0 && sirenTimer <= 0 && cityIntroTimer <= 0) {
+  const showTally = totalKills > 0 && sirenTimer <= 0 && cityIntroTimer <= 0
+    && (!isMobileDevice || waveState === 'transition');
+  if (showTally) {
     const types = [
       { key: 'rocket', emoji: '🚀', label: 'Rockets' },
       { key: 'drone', emoji: '✈️', label: 'Drones' },
       { key: 'ballistic', emoji: '💣', label: 'Missiles' },
-      { key: 'decoy', emoji: '🎆', label: 'Flares' },
+      { key: 'decoy', emoji: '🎆', label: 'Cluster Bombs' },
     ].filter(t => killCounts[t.key] > 0);
 
     const accuracy = shotsFired > 0 ? Math.round(shotsHit / shotsFired * 100) : 0;
