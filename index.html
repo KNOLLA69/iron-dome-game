@@ -127,6 +127,9 @@ const TEXTS = {
     gamesPlayed: 'משחקים שוחקו', shareWith: 'שתף עם חברים',
     shareCopied: 'הקישור הועתק!',
     shareText: 'שחקתי כיפת ברזל - הגנה על ישראל! 🇮🇱',
+    shareScore: 'השגתי SCORE נקודות בכיפת ברזל! 🇮🇱🎯 אתה יכול לנצח אותי?',
+    shareVictory: 'הגנתי על כל 5 ערי ישראל בכיפת ברזל! 🇮🇱🏆 SCORE נקודות!',
+    shareYourScore: 'שתף את הציון שלך',
     terms: 'תנאי שימוש', privacy: 'מדיניות פרטיות', disclaimer: 'הצהרה',
     droneAlert: 'מל"ט!', ballisticAlert: 'טיל בליסטי!',
     rocketAlert: 'רקטה!', decoyAlert: 'נורית הטעיה!',
@@ -158,6 +161,9 @@ const TEXTS = {
     gamesPlayed: 'Games Played', shareWith: 'Share with friends',
     shareCopied: 'Link copied!',
     shareText: 'I played Iron Dome - Defend Israel! 🇮🇱',
+    shareScore: 'I scored SCORE points on Iron Dome! 🇮🇱🎯 Can you beat me?',
+    shareVictory: 'I defended all 5 cities of Israel in Iron Dome! 🇮🇱🏆 SCORE points!',
+    shareYourScore: 'Share your score',
     terms: 'Terms & Conditions', privacy: 'Privacy Policy', disclaimer: 'Disclaimer',
     droneAlert: 'UAV!', ballisticAlert: 'Ballistic!',
     rocketAlert: 'Rocket!', decoyAlert: 'Decoy Flare!',
@@ -189,6 +195,9 @@ const TEXTS = {
     gamesPlayed: 'Spiele gespielt', shareWith: 'Mit Freunden teilen',
     shareCopied: 'Link kopiert!',
     shareText: 'Ich spielte Iron Dome - Israel verteidigen! 🇮🇱',
+    shareScore: 'Ich habe SCORE Punkte bei Iron Dome erzielt! 🇮🇱🎯 Kannst du mich schlagen?',
+    shareVictory: 'Ich habe alle 5 Städte Israels bei Iron Dome verteidigt! 🇮🇱🏆 SCORE Punkte!',
+    shareYourScore: 'Teile deinen Punktestand',
     terms: 'AGB', privacy: 'Datenschutz', disclaimer: 'Haftungsausschluss',
     droneAlert: 'Drohne!', ballisticAlert: 'Ballistisch!',
     rocketAlert: 'Rakete!', decoyAlert: 'Täuschkörper!',
@@ -512,6 +521,58 @@ fetchPlayCount();
 
 // Game URL for sharing
 const GAME_URL = 'https://iron-dome-game.com/';
+
+// Dynamic share text with score
+function getShareText(isVictory) {
+  const key = isVictory ? 'shareVictory' : 'shareScore';
+  return t(key).replace('SCORE', score.toLocaleString());
+}
+
+function openShare(type, text, url) {
+  if (type === 'whatsapp') window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
+  else if (type === 'twitter') window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+  else if (type === 'email') window.open(`mailto:?subject=${encodeURIComponent(text)}&body=${encodeURIComponent(text + '\n' + url)}`, '_blank');
+  else if (type === 'copy') {
+    navigator.clipboard.writeText(text + ' ' + url).catch(()=>{});
+    showCopiedToast = 120;
+  }
+}
+
+// Reusable share button row renderer
+function drawShareButtons(y, rects) {
+  const label = t('shareYourScore');
+  ctx.fillStyle = '#6688aa';
+  ctx.font = `${fz(11)}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.fillText(label, W/2, y);
+  const btnY = y + fz(8);
+  const btnSize = fz(32);
+  const gap = fz(8);
+  const types = ['whatsapp','twitter','email','copy'];
+  const icons = ['W','X','✉','🔗'];
+  const colors = ['#25D366','#1DA1F2','#555577','#6688aa'];
+  const totalW = types.length * btnSize + (types.length-1) * gap;
+  const startX = W/2 - totalW/2;
+  rects.length = 0;
+  types.forEach((type, i) => {
+    const sx = startX + i * (btnSize + gap);
+    ctx.fillStyle = colors[i];
+    ctx.beginPath(); ctx.roundRect(sx, btnY, btnSize, btnSize, 6); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${fz(13)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText(icons[i], sx + btnSize/2, btnY + btnSize*0.65);
+    rects.push({ x: sx, y: btnY, w: btnSize, h: btnSize, type });
+  });
+  // Copied toast
+  if (showCopiedToast > 0) {
+    ctx.fillStyle = 'rgba(0,200,100,0.8)';
+    ctx.font = `bold ${fz(11)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText(t('shareCopied'), W/2, btnY + btnSize + fz(14));
+  }
+  return btnY + btnSize + fz(8);
+}
 
 let logicalW, logicalH;
 if (isMobileDevice) {
@@ -1813,6 +1874,7 @@ let submitBtnRect = { x: 0, y: 0, w: 0, h: 0 };
 let lbBtnRect = { x: 0, y: 0, w: 0, h: 0 }; // leaderboard button
 let contactBtnRect = { x: 0, y: 0, w: 0, h: 0 }; // contact button
 let shareBtnRects = []; // [{x,y,w,h,type}]
+let endShareBtnRects = []; // [{x,y,w,h,type}] for victory/gameover screens
 let legalBtnRects = []; // [{x,y,w,h,tab}]
 let legalCloseBtnRect = { x: 0, y: 0, w: 0, h: 0 };
 let legalTabBtnRects = []; // [{x,y,w,h,tab}]
@@ -2201,15 +2263,7 @@ function handleClick() {
     // Share buttons
     for (const sb of shareBtnRects) {
       if (isInBtn(mouseX, mouseY, sb)) {
-        const text = t('shareText');
-        const url = GAME_URL;
-        if (sb.type === 'whatsapp') window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
-        else if (sb.type === 'twitter') window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
-        else if (sb.type === 'email') window.open(`mailto:?subject=${encodeURIComponent(text)}&body=${encodeURIComponent(text + '\n' + url)}`, '_blank');
-        else if (sb.type === 'copy') {
-          navigator.clipboard.writeText(url).catch(()=>{});
-          showCopiedToast = 120;
-        }
+        openShare(sb.type, t('shareText'), GAME_URL);
         return;
       }
     }
@@ -2260,11 +2314,17 @@ function handleClick() {
   if (state === 'victory') {
     if (isInBtn(mouseX, mouseY, playAgainBtnRect)) { showLeaderboard = false; startGame(); return; }
     if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = !showLeaderboard; if (showLeaderboard) fetchLeaderboard(); return; }
+    for (const sb of endShareBtnRects) {
+      if (isInBtn(mouseX, mouseY, sb)) { openShare(sb.type, getShareText(true), GAME_URL); return; }
+    }
     return;
   }
   if (state === 'gameover') {
     if (isInBtn(mouseX, mouseY, playAgainBtnRect)) { showLeaderboard = false; startGame(); return; }
     if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = !showLeaderboard; if (showLeaderboard) fetchLeaderboard(); return; }
+    for (const sb of endShareBtnRects) {
+      if (isInBtn(mouseX, mouseY, sb)) { openShare(sb.type, getShareText(false), GAME_URL); return; }
+    }
     return;
   }
   if (state === 'playing') {
@@ -5117,14 +5177,17 @@ function drawVictory() {
     return;
   }
 
-  const vY = H * 0.1;
+  // Start content below language flags
+  const mob = isMobileDevice;
+  const vY = mob ? fz(52) + 12 : H * 0.1;
+  const sp = mob ? 0.75 : 1; // tighter spacing on mobile
 
   // Victory title with golden glow
   ctx.save();
   ctx.shadowColor = '#ffcc00';
   ctx.shadowBlur = 30;
   ctx.fillStyle = '#ffdd00';
-  ctx.font = `bold ${fz(36)}px Arial`;
+  ctx.font = `bold ${fz(mob ? 28 : 36)}px Arial`;
   ctx.textAlign = 'center';
   const pulse = 1 + Math.sin(frame * 0.04) * 0.03;
   ctx.translate(W/2, vY);
@@ -5135,41 +5198,41 @@ function drawVictory() {
 
   // Description
   ctx.fillStyle = '#88ccff';
-  ctx.font = `${fz(15)}px Arial`;
+  ctx.font = `${fz(mob ? 13 : 15)}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText(t('victoryDesc'), W/2, vY + fz(30));
+  ctx.fillText(t('victoryDesc'), W/2, vY + fz(26 * sp));
 
   // Score
   ctx.fillStyle = '#fff';
-  ctx.font = `bold ${fz(30)}px Arial`;
-  ctx.fillText(`${score}`, W/2, vY + fz(70));
+  ctx.font = `bold ${fz(mob ? 26 : 30)}px Arial`;
+  ctx.fillText(`${score}`, W/2, vY + fz(60 * sp));
   ctx.fillStyle = 'rgba(150,180,220,0.5)';
-  ctx.font = `${fz(12)}px Arial`;
-  ctx.fillText(t('finalScore'), W/2, vY + fz(88));
+  ctx.font = `${fz(11)}px Arial`;
+  ctx.fillText(t('finalScore'), W/2, vY + fz(75 * sp));
 
   // Stats
   ctx.fillStyle = '#88bbff';
-  ctx.font = `${fz(13)}px Arial`;
-  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, vY + fz(110));
+  ctx.font = `${fz(mob ? 11 : 13)}px Arial`;
+  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, vY + fz(93 * sp));
 
   // Cities defended list
   ctx.fillStyle = 'rgba(100, 200, 255, 0.6)';
-  ctx.font = `${fz(11)}px Arial`;
+  ctx.font = `${fz(mob ? 9 : 11)}px Arial`;
   const cityNames = CITIES.map(c => c.name[currentLang] || c.name.en).join('  \u2022  ');
-  ctx.fillText(cityNames, W/2, vY + fz(132));
+  ctx.fillText(cityNames, W/2, vY + fz(110 * sp));
 
   // Rating
   const ratings = t('rating');
   ctx.fillStyle = '#ffdd00';
-  ctx.font = `bold ${fz(18)}px Arial`;
-  ctx.fillText(ratings[5], W/2, vY + fz(160));
+  ctx.font = `bold ${fz(mob ? 15 : 18)}px Arial`;
+  ctx.fillText(ratings[5], W/2, vY + fz(132 * sp));
 
   // Buttons side by side
   const gap = fz(10);
-  const playW = fz(160), playH = fz(42);
-  const lbW2 = fz(55), lbH2 = fz(42);
+  const playW = fz(mob ? 140 : 160), playH = fz(mob ? 36 : 42);
+  const lbW2 = fz(mob ? 48 : 55), lbH2 = fz(mob ? 36 : 42);
   const totalBtnW = playW + gap + lbW2;
-  const btnY = vY + fz(178);
+  const btnY = vY + fz(145 * sp);
   const startX = W/2 - totalBtnW / 2;
 
   // Play again with glow
@@ -5209,6 +5272,11 @@ function drawVictory() {
   ctx.font = `bold ${fz(18)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText('\u{1F3C6}', lbX + lbW2 / 2, btnY + lbH2 * 0.63);
+
+  // Share buttons (M8 — share prompt after victory)
+  if (!isEmbedMode) {
+    drawShareButtons(btnY + playH + fz(18), endShareBtnRects);
+  }
 }
 
 function drawGameOver() {
@@ -5242,13 +5310,15 @@ function drawGameOver() {
     return;
   }
 
-  const goY = H * 0.12;
+  const mobGO = isMobileDevice;
+  const goY = mobGO ? fz(52) + 12 : H * 0.12;
+  const spGO = mobGO ? 0.78 : 1;
 
   ctx.save();
   ctx.shadowColor = 'rgba(255,50,50,0.6)';
   ctx.shadowBlur = 15;
   ctx.fillStyle = '#ff4444';
-  ctx.font = `bold ${fz(34)}px Arial`;
+  ctx.font = `bold ${fz(mobGO ? 28 : 34)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(t('gameOver'), W/2, goY);
   ctx.shadowBlur = 0;
@@ -5259,9 +5329,9 @@ function drawGameOver() {
   ctx.shadowColor = 'rgba(255,255,255,0.4)';
   ctx.shadowBlur = 8;
   ctx.fillStyle = '#fff';
-  ctx.font = `bold ${fz(30)}px Arial`;
+  ctx.font = `bold ${fz(mobGO ? 26 : 30)}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText(`${score}`, W/2, goY + fz(42));
+  ctx.fillText(`${score}`, W/2, goY + fz(38 * spGO));
   ctx.shadowBlur = 0;
   ctx.restore();
   if (score >= highScore && score > 0) {
@@ -5269,22 +5339,22 @@ function drawGameOver() {
     ctx.shadowColor = 'rgba(255,220,50,0.5)';
     ctx.shadowBlur = 8;
     ctx.fillStyle = '#ffdd00';
-    ctx.font = `bold ${fz(14)}px Arial`;
+    ctx.font = `bold ${fz(mobGO ? 12 : 14)}px Arial`;
     ctx.textAlign = 'center';
-    ctx.fillText(t('newRecord'), W/2, goY + fz(62));
+    ctx.fillText(t('newRecord'), W/2, goY + fz(55 * spGO));
     ctx.shadowBlur = 0;
     ctx.restore();
   } else {
     ctx.fillStyle = '#888';
-    ctx.font = `${fz(12)}px Arial`;
+    ctx.font = `${fz(11)}px Arial`;
     ctx.textAlign = 'center';
-    ctx.fillText(`${t('best')}: ${highScore}`, W/2, goY + fz(62));
+    ctx.fillText(`${t('best')}: ${highScore}`, W/2, goY + fz(55 * spGO));
   }
 
   // Wave + combo
   ctx.fillStyle = '#88bbff';
-  ctx.font = `${fz(13)}px Arial`;
-  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, goY + fz(84));
+  ctx.font = `${fz(mobGO ? 11 : 13)}px Arial`;
+  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, goY + fz(73 * spGO));
 
   // City destroyed message
   const destroyedCity = CITIES[currentCityIdx] ? (CITIES[currentCityIdx].name[currentLang] || CITIES[currentCityIdx].name.en) : '';
@@ -5292,11 +5362,11 @@ function drawGameOver() {
   ctx.shadowColor = 'rgba(255,50,50,0.4)';
   ctx.shadowBlur = 8;
   ctx.fillStyle = '#ff6666';
-  ctx.font = `bold ${fz(14)}px Arial`;
+  ctx.font = `bold ${fz(mobGO ? 12 : 14)}px Arial`;
   if (currentLang === 'he') {
-    ctx.fillText(`${destroyedCity} ${t('cityDestroyed')}`, W/2, goY + fz(100));
+    ctx.fillText(`${destroyedCity} ${t('cityDestroyed')}`, W/2, goY + fz(88 * spGO));
   } else {
-    ctx.fillText(`${destroyedCity} ${t('cityDestroyed')}`, W/2, goY + fz(100));
+    ctx.fillText(`${destroyedCity} ${t('cityDestroyed')}`, W/2, goY + fz(88 * spGO));
   }
   ctx.shadowBlur = 0;
   ctx.restore();
@@ -5311,15 +5381,15 @@ function drawGameOver() {
   else if (score >= 20) ri = 2;
   else if (score >= 5) ri = 1;
   ctx.fillStyle = rColors[ri];
-  ctx.font = `bold ${fz(18)}px Arial`;
-  ctx.fillText(ratings[ri], W/2, goY + fz(126));
+  ctx.font = `bold ${fz(mobGO ? 15 : 18)}px Arial`;
+  ctx.fillText(ratings[ri], W/2, goY + fz(108 * spGO));
 
   // Buttons side by side
   const gap = fz(10);
-  const playW = fz(160), playH = fz(42);
-  const lbW2 = fz(55), lbH2 = fz(42);
+  const playW = fz(mobGO ? 140 : 160), playH = fz(mobGO ? 36 : 42);
+  const lbW2 = fz(mobGO ? 48 : 55), lbH2 = fz(mobGO ? 36 : 42);
   const totalBtnW = playW + gap + lbW2;
-  const btnY = goY + fz(141);
+  const btnY = goY + fz(120 * spGO);
   const startX = W/2 - totalBtnW/2;
 
   // Play again with glow
@@ -5358,6 +5428,11 @@ function drawGameOver() {
   ctx.fillStyle = '#6aacee';
   ctx.font = `bold ${fz(18)}px Arial`;
   ctx.fillText(`\u{1F3C6}`, lbX + lbW2/2, btnY + lbH2*0.63);
+
+  // Share buttons (M7 — share prompt after game over)
+  if (!isEmbedMode) {
+    drawShareButtons(btnY + playH + fz(18), endShareBtnRects);
+  }
 }
 
 // ==================== GAME LOOP ====================
