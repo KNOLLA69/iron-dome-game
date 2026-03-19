@@ -4397,20 +4397,19 @@ function drawHUD() {
     // Dark backdrop for readability
     const kfBgH = kfEntries * kfLineH + fz(6);
     const kfBgY = GROUND_Y - fz(6) - kfBgH;
-    ctx.fillStyle = 'rgba(0,5,15,0.55)';
-    ctx.beginPath(); ctx.roundRect(kfX - 2, kfBgY, fz(100), kfBgH, 5); ctx.fill();
+    ctx.fillStyle = 'rgba(0,5,15,0.75)';
+    ctx.beginPath(); ctx.roundRect(kfX - 4, kfBgY, fz(105), kfBgH, 6); ctx.fill();
     for (let i = 0; i < kfEntries; i++) {
       const kf = killFeed[i];
-      ctx.globalAlpha = i === 0 ? 1 : i === 1 ? 0.6 : 0.35;
+      ctx.globalAlpha = i === 0 ? 1 : i === 1 ? 0.7 : 0.4;
       const ey = GROUND_Y - fz(10) - i * kfLineH;
       // Emoji
       ctx.font = `${fz(11)}px Arial`;
       ctx.textAlign = 'left';
       ctx.fillText(kf.emoji || '🎯', kfX + 2, ey);
-      // Type name in its color
-      ctx.fillStyle = kf.color || '#ccc';
+      // Type name — always white for readability
+      ctx.fillStyle = '#dde8ff';
       ctx.font = `bold ${fz(11)}px Arial`;
-      ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 3;
       ctx.fillText(kf.type, kfX + fz(16), ey);
       ctx.shadowBlur = 0;
       // Points in green
