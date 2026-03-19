@@ -1756,7 +1756,8 @@ let activePower = null; // 'shield', 'rapid', 'emp'
 let activePowerTimer = 0;
 let cityDamage = 0; // damage taken by current city (accumulates over 3 waves)
 let cityMaxHP = 5; // endurance per city (varies by city)
-let killFeed = []; // [{text, color, time}]
+let killFeed = []; // legacy
+let killCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
 let shieldHP = 0; // shield blocks
 // Play counter
 let totalPlaysCount = 0;
@@ -2340,6 +2341,7 @@ function startGame() {
   particles = []; floatingTexts = []; smokeTrails = [];
   powerUps = []; activePower = null; activePowerTimer = 0;
   cityDamage = 0; killFeed = [];
+  killCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
   frame = 0; screenFlash = 0;
   seenTypes = {}; enemyAlert = null;
   currentCityIdx = 0; cityIntroTimer = 0;
@@ -2872,9 +2874,8 @@ function update() {
           let text = `+${pts}`;
           if (mult > 1) text += ` (x${mult})`;
           addFloat(m.x, m.y-10, text, mult > 1 ? '#ffdd00' : '#00ff88', mult > 1 ? 24 : 16);
-          // Kill feed
-          killFeed.unshift({ type: m.type, pts: pts, color: ENEMY_TYPES[m.type].color, emoji: ENEMY_TYPES[m.type].emoji, time: frame });
-          if (killFeed.length > 3) killFeed.pop();
+          // Kill counter
+          if (killCounts[m.type] !== undefined) killCounts[m.type]++;
           missiles.splice(j, 1); interceptors.splice(i, 1);
           hit = true; break;
         } else {
@@ -4390,34 +4391,33 @@ function drawHUD() {
     }
   }
 
-  // ===== BOTTOM-LEFT: Kill Feed =====
-  if (killFeed.length > 0 && sirenTimer <= 0 && cityIntroTimer <= 0) {
-    const kfEntries = Math.min(killFeed.length, 3);
-    const kfX = fz(6), kfLineH = fz(15);
-    // Dark backdrop for readability
-    const kfBgH = kfEntries * kfLineH + fz(6);
+  // ===== BOTTOM-LEFT: Kill Tally =====
+  const totalKills = killCounts.rocket + killCounts.drone + killCounts.ballistic + killCounts.decoy;
+  if (totalKills > 0 && sirenTimer <= 0 && cityIntroTimer <= 0) {
+    const types = [
+      { key: 'rocket', emoji: '🚀', label: 'Rockets' },
+      { key: 'drone', emoji: '✈️', label: 'Drones' },
+      { key: 'ballistic', emoji: '💣', label: 'Missiles' },
+      { key: 'decoy', emoji: '🎆', label: 'Flares' },
+    ].filter(t => killCounts[t.key] > 0);
+
+    const kfX = fz(6), kfLineH = fz(13);
+    const kfBgH = types.length * kfLineH + fz(6);
     const kfBgY = GROUND_Y - fz(6) - kfBgH;
     ctx.fillStyle = 'rgba(0,5,15,0.75)';
-    ctx.beginPath(); ctx.roundRect(kfX - 4, kfBgY, fz(105), kfBgH, 6); ctx.fill();
-    for (let i = 0; i < kfEntries; i++) {
-      const kf = killFeed[i];
-      ctx.globalAlpha = i === 0 ? 1 : i === 1 ? 0.7 : 0.4;
-      const ey = GROUND_Y - fz(10) - i * kfLineH;
-      // Emoji
-      ctx.font = `${fz(11)}px Arial`;
+    ctx.beginPath(); ctx.roundRect(kfX - 4, kfBgY, fz(80), kfBgH, 6); ctx.fill();
+    types.forEach((et, i) => {
+      const ey = kfBgY + fz(12) + i * kfLineH;
+      ctx.font = `${fz(10)}px Arial`;
       ctx.textAlign = 'left';
-      ctx.fillText(kf.emoji || '🎯', kfX + 2, ey);
-      // Type name — always white for readability
+      ctx.fillText(et.emoji, kfX + 2, ey);
       ctx.fillStyle = '#dde8ff';
-      ctx.font = `bold ${fz(11)}px Arial`;
-      ctx.fillText(kf.type, kfX + fz(16), ey);
-      ctx.shadowBlur = 0;
-      // Points in green
-      ctx.fillStyle = '#44ee88';
-      ctx.font = `bold ${fz(10)}px Arial`;
-      ctx.fillText(`+${kf.pts}`, kfX + fz(60), ey);
-    }
-    ctx.globalAlpha = 1;
+      ctx.font = `bold ${fz(9)}px Arial`;
+      ctx.fillText(`${killCounts[et.key]}`, kfX + fz(16), ey);
+      ctx.fillStyle = 'rgba(180,210,240,0.5)';
+      ctx.font = `${fz(8)}px Arial`;
+      ctx.fillText(et.label, kfX + fz(28), ey);
+    });
   }
 
   // ===== BOTTOM-RIGHT: Ammo =====
