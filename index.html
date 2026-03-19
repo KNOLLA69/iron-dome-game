@@ -4276,16 +4276,14 @@ function drawCityIntro() {
 }
 
 function drawHUD() {
-  // fz() for ALL text (scales 1.6x on mobile for readability)
-  // Raw px for panel dimensions (stays compact on mobile)
   const endRatio = cityMaxHP > 0 ? Math.max(0, 1 - cityDamage / cityMaxHP) : 1;
   const hpColors = endRatio > 0.6 ? ['#22dd77','#00aa55'] : endRatio > 0.3 ? ['#ffcc33','#dd8800'] : ['#ff5555','#cc2222'];
   const cName = CITIES[currentCityIdx] ? (CITIES[currentCityIdx].name[currentLang] || CITIES[currentCityIdx].name.en) : '';
   const displayWave = waveState === 'siren_intro' ? wave + 1 : wave;
 
-  // ===== SLIM TOP BAR =====
-  const barH = fz(32);
-  ctx.fillStyle = 'rgba(0, 8, 20, 0.65)';
+  // ===== TOP BAR =====
+  const barH = fz(38);
+  ctx.fillStyle = 'rgba(0, 8, 20, 0.7)';
   ctx.fillRect(0, 0, W, barH);
   const edgeGrad = ctx.createLinearGradient(0, barH - 1, 0, barH + 1);
   edgeGrad.addColorStop(0, 'rgba(80, 160, 255, 0.12)');
@@ -4293,103 +4291,98 @@ function drawHUD() {
   ctx.fillStyle = edgeGrad;
   ctx.fillRect(0, barH - 1, W, 2);
 
-  // -- Pause button (left edge) --
-  const pbS = fz(16);
-  const pbX = fz(4), pbY = (barH - pbS) / 2;
+  // -- Pause button --
+  const pbS = fz(20);
+  const pbX = fz(6), pbY = (barH - pbS) / 2;
   pauseBtnRect = { x: pbX, y: pbY, w: pbS, h: pbS };
-  ctx.fillStyle = 'rgba(50,60,80,0.4)';
-  ctx.beginPath(); ctx.roundRect(pbX, pbY, pbS, pbS, 3); ctx.fill();
-  ctx.fillStyle = 'rgba(180,200,230,0.6)';
-  ctx.fillRect(pbX + pbS*0.28, pbY + pbS*0.28, pbS*0.14, pbS*0.44);
-  ctx.fillRect(pbX + pbS*0.56, pbY + pbS*0.28, pbS*0.14, pbS*0.44);
+  ctx.fillStyle = 'rgba(50,60,80,0.5)';
+  ctx.beginPath(); ctx.roundRect(pbX, pbY, pbS, pbS, 4); ctx.fill();
+  ctx.fillStyle = 'rgba(180,200,230,0.65)';
+  ctx.fillRect(pbX + pbS*0.27, pbY + pbS*0.25, pbS*0.16, pbS*0.5);
+  ctx.fillRect(pbX + pbS*0.57, pbY + pbS*0.25, pbS*0.16, pbS*0.5);
 
-  // -- City name + wave + HP bar --
-  const ciX = pbX + pbS + fz(6);
-  ctx.fillStyle = '#dde8ff';
-  ctx.font = `bold ${fz(11)}px Arial`;
+  // -- City + wave + HP bar --
+  const ciX = pbX + pbS + fz(8);
+  ctx.fillStyle = '#e0ecff';
+  ctx.font = `bold ${fz(13)}px Arial`;
   ctx.textAlign = 'left';
-  ctx.fillText(cName, ciX, barH * 0.46);
-  // Wave badge inline
+  ctx.fillText(cName, ciX, barH * 0.42);
   const nameW = ctx.measureText(cName).width;
-  ctx.fillStyle = 'rgba(120,180,240,0.55)';
-  ctx.font = `bold ${fz(7)}px Arial`;
-  ctx.fillText(`W${displayWave}`, ciX + nameW + fz(4), barH * 0.43);
-  // HP bar — compact
-  const hpX = ciX, hpY = barH * 0.58, hpW = fz(75), hpH = fz(4);
+  ctx.fillStyle = 'rgba(120,180,240,0.6)';
+  ctx.font = `bold ${fz(9)}px Arial`;
+  ctx.fillText(`W${displayWave}`, ciX + nameW + fz(5), barH * 0.40);
+  // HP bar
+  const hpX = ciX, hpY = barH * 0.55, hpW = fz(90), hpH = fz(6);
   drawGradBar(hpX, hpY, hpW, hpH, endRatio, hpColors);
-  // HP text
-  ctx.fillStyle = endRatio > 0.3 ? 'rgba(180,210,240,0.7)' : '#ff6666';
-  ctx.font = `bold ${fz(7)}px Arial`;
+  ctx.fillStyle = endRatio > 0.3 ? 'rgba(200,220,255,0.8)' : '#ff6666';
+  ctx.font = `bold ${fz(9)}px Arial`;
   ctx.textAlign = 'left';
-  ctx.fillText(`${cityDamage}/${cityMaxHP}`, hpX + hpW + fz(3), hpY + hpH + 1);
-  // Shield indicator
+  ctx.fillText(`${cityDamage}/${cityMaxHP}`, hpX + hpW + fz(4), hpY + hpH);
   if (shieldHP > 0) {
-    ctx.font = `${fz(8)}px Arial`;
-    ctx.fillText('🛡️', hpX + hpW + fz(20), hpY + hpH + 1);
+    ctx.font = `${fz(10)}px Arial`;
+    ctx.fillText('🛡️', hpX + hpW + fz(26), hpY + hpH);
   }
 
-  // -- Wave info (center) --
-  ctx.fillStyle = 'rgba(100,180,255,0.5)';
-  ctx.font = `${fz(8)}px Arial`;
-  ctx.textAlign = 'center';
+  // -- Missiles remaining (center) --
   const missilesInPlay = waveMissilesLeft + missiles.length;
   if (waveState === 'playing' && missilesInPlay > 0) {
+    ctx.fillStyle = 'rgba(120,190,255,0.6)';
+    ctx.font = `${fz(10)}px Arial`;
+    ctx.textAlign = 'center';
     ctx.fillText(`${missilesInPlay} ${t('missiles')}`, W/2, barH * 0.6);
   }
 
-  // -- Score (right) --
+  // -- Score (right, big + glowing) --
   ctx.save();
   ctx.textAlign = 'right';
-  const sX = W - fz(8);
-  ctx.shadowColor = 'rgba(100, 200, 255, 0.4)';
-  ctx.shadowBlur = 10;
+  const sX = W - fz(10);
+  ctx.shadowColor = 'rgba(100, 200, 255, 0.5)';
+  ctx.shadowBlur = 12;
   ctx.fillStyle = '#fff';
-  ctx.font = `bold ${fz(18)}px Arial`;
-  ctx.fillText(`${score}`, sX, barH * 0.62);
+  ctx.font = `bold ${fz(24)}px Arial`;
+  ctx.fillText(`${score}`, sX, barH * 0.6);
   ctx.shadowBlur = 0;
   ctx.restore();
-  ctx.fillStyle = 'rgba(150,180,220,0.35)';
-  ctx.font = `bold ${fz(6)}px Arial`;
+  ctx.fillStyle = 'rgba(150,180,220,0.4)';
+  ctx.font = `bold ${fz(7)}px Arial`;
   ctx.textAlign = 'right';
-  ctx.fillText(t('score').toUpperCase(), sX, barH * 0.88);
+  ctx.fillText(t('score').toUpperCase(), sX, barH * 0.85);
 
-  // ===== ACTIVE POWER-UPS (tiny pills below bar) =====
+  // ===== POWER-UP PILL (below bar, left) =====
   if (activePower && activePowerTimer > 0) {
-    const py = barH + 2;
+    const py = barH + 3;
     const pwSecs = Math.ceil(activePowerTimer / 60);
     const pwIcon = activePower === 'rapid' ? '⚡' : '💥';
-    ctx.fillStyle = 'rgba(255,170,50,0.18)';
-    ctx.beginPath(); ctx.roundRect(fz(4), py, fz(30), fz(10), 3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,170,50,0.2)';
+    ctx.beginPath(); ctx.roundRect(fz(6), py, fz(36), fz(13), 4); ctx.fill();
     ctx.fillStyle = '#ffaa33';
-    ctx.font = `bold ${fz(7)}px Arial`;
+    ctx.font = `bold ${fz(9)}px Arial`;
     ctx.textAlign = 'left';
-    ctx.fillText(`${pwIcon} ${pwSecs}s`, fz(6), py + fz(8));
+    ctx.fillText(`${pwIcon} ${pwSecs}s`, fz(9), py + fz(10));
   }
 
-  // ===== COMBO (compact center pill) =====
+  // ===== COMBO (center pill) =====
   if (combo >= 2) {
     const mult = getMultiplier();
     const pulse = 1 + Math.sin(frame*0.15)*0.03;
     const cc = combo >= 10 ? '#ff55ff' : combo >= 6 ? '#ffaa00' : '#ffdd00';
-
     ctx.save();
-    ctx.translate(W/2, barH + fz(8));
+    ctx.translate(W/2, barH + fz(10));
     ctx.scale(pulse, pulse);
-    const pw = fz(42), ph = fz(12);
+    const pw = fz(55), ph = fz(16);
     ctx.fillStyle = 'rgba(255,200,0,0.12)';
-    ctx.beginPath(); ctx.roundRect(-pw/2, -ph/2, pw, ph, 6); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,200,0,0.2)';
+    ctx.beginPath(); ctx.roundRect(-pw/2, -ph/2, pw, ph, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,200,0,0.22)';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.roundRect(-pw/2, -ph/2, pw, ph, 6); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(-pw/2, -ph/2, pw, ph, 8); ctx.stroke();
     ctx.textAlign = 'center';
     ctx.fillStyle = cc;
-    ctx.font = `bold ${fz(8)}px Arial`;
-    ctx.fillText(`🔥x${combo}${mult > 1 ? ' ×'+mult : ''}`, 0, fz(3));
+    ctx.font = `bold ${fz(10)}px Arial`;
+    ctx.fillText(`🔥x${combo}${mult > 1 ? ' ×'+mult : ''}`, 0, fz(4));
     ctx.restore();
-
     if (comboTimer > 0) {
-      const cbw = fz(30), cbh = 2;
-      const cbx = W/2 - cbw/2, cby = barH + fz(15);
+      const cbw = fz(38), cbh = 2;
+      const cbx = W/2 - cbw/2, cby = barH + fz(19);
       ctx.fillStyle = 'rgba(255,200,0,0.1)';
       ctx.fillRect(cbx, cby, cbw, cbh);
       ctx.fillStyle = cc;
@@ -4397,49 +4390,59 @@ function drawHUD() {
     }
   }
 
-  // ===== BOTTOM-LEFT: Kill Feed (text with shadow, no panel) =====
+  // ===== BOTTOM-LEFT: Kill Feed =====
   if (killFeed.length > 0 && sirenTimer <= 0 && cityIntroTimer <= 0) {
     const kfEntries = Math.min(killFeed.length, 3);
+    const kfX = fz(6), kfLineH = fz(15);
+    // Dark backdrop for readability
+    const kfBgH = kfEntries * kfLineH + fz(6);
+    const kfBgY = GROUND_Y - fz(6) - kfBgH;
+    ctx.fillStyle = 'rgba(0,5,15,0.55)';
+    ctx.beginPath(); ctx.roundRect(kfX - 2, kfBgY, fz(100), kfBgH, 5); ctx.fill();
     for (let i = 0; i < kfEntries; i++) {
       const kf = killFeed[i];
-      ctx.globalAlpha = i === 0 ? 0.8 : i === 1 ? 0.4 : 0.2;
-      ctx.font = `bold ${fz(8)}px Arial`;
+      ctx.globalAlpha = i === 0 ? 1 : i === 1 ? 0.6 : 0.35;
+      const ey = GROUND_Y - fz(10) - i * kfLineH;
+      // Emoji
+      ctx.font = `${fz(11)}px Arial`;
       ctx.textAlign = 'left';
-      ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 3;
-      ctx.fillStyle = kf.color || '#aaa';
-      ctx.fillText(`${kf.emoji||'🎯'} ${kf.type} +${kf.pts}`, fz(4), GROUND_Y - fz(6) - i * fz(10));
+      ctx.fillText(kf.emoji || '🎯', kfX + 2, ey);
+      // Type name in its color
+      ctx.fillStyle = kf.color || '#ccc';
+      ctx.font = `bold ${fz(11)}px Arial`;
+      ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 3;
+      ctx.fillText(kf.type, kfX + fz(16), ey);
       ctx.shadowBlur = 0;
+      // Points in green
+      ctx.fillStyle = '#44ee88';
+      ctx.font = `bold ${fz(10)}px Arial`;
+      ctx.fillText(`+${kf.pts}`, kfX + fz(60), ey);
     }
     ctx.globalAlpha = 1;
   }
 
-  // ===== BOTTOM-RIGHT: Ammo (compact pill) =====
+  // ===== BOTTOM-RIGHT: Ammo =====
   if (sirenTimer <= 0 && cityIntroTimer <= 0) {
     const ammoRatio = maxAmmo > 0 ? ammo / maxAmmo : 0;
-    const aW = fz(72), aH = fz(18);
-    const aX = W - fz(4) - aW, aY = GROUND_Y - fz(6) - aH;
-
+    const aW = fz(85), aH = fz(22);
+    const aX = W - fz(6) - aW, aY = GROUND_Y - fz(8) - aH;
     ctx.fillStyle = 'rgba(0,10,25,0.6)';
-    ctx.beginPath(); ctx.roundRect(aX, aY, aW, aH, 5); ctx.fill();
-
+    ctx.beginPath(); ctx.roundRect(aX, aY, aW, aH, 6); ctx.fill();
     // Count
-    ctx.fillStyle = ammoRatio > 0.2 ? '#dde8ff' : '#ff6666';
-    ctx.font = `bold ${fz(10)}px Arial`;
+    ctx.fillStyle = ammoRatio > 0.2 ? '#e0ecff' : '#ff6666';
+    ctx.font = `bold ${fz(12)}px Arial`;
     ctx.textAlign = 'right';
-    ctx.fillText(`🎯 ${ammo}/${maxAmmo}`, aX + aW - fz(4), aY + fz(10));
-
+    ctx.fillText(`🎯 ${ammo}/${maxAmmo}`, aX + aW - fz(5), aY + fz(13));
     // Bar
-    const abH = fz(3);
-    drawGradBar(aX + 3, aY + aH - abH - 2, aW - 6, abH, ammoRatio,
+    drawGradBar(aX + 4, aY + aH - fz(4) - 2, aW - 8, fz(3), ammoRatio,
       ammoRatio > 0.5 ? ['#22dd77','#00aa55'] : ammoRatio > 0.2 ? ['#ffcc33','#dd8800'] : ['#ff5555','#cc2222']);
-
     // Out of ammo
     if (ammo <= 0 && state === 'playing' && Math.sin(frame * 0.15) > 0) {
       ctx.fillStyle = '#ff3333';
-      ctx.font = `bold ${fz(10)}px Arial`;
+      ctx.font = `bold ${fz(12)}px Arial`;
       ctx.textAlign = 'center';
       ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 5;
-      ctx.fillText(t('outOfAmmo'), W/2, GROUND_Y - fz(25));
+      ctx.fillText(t('outOfAmmo'), W/2, GROUND_Y - fz(30));
       ctx.shadowBlur = 0;
     }
   }
