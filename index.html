@@ -1759,6 +1759,7 @@ let cityMaxHP = 5; // endurance per city (varies by city)
 let killFeed = []; // legacy
 let killCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
 let spawnCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
+let shotsFired = 0, shotsHit = 0;
 let shieldHP = 0; // shield blocks
 // Play counter
 let totalPlaysCount = 0;
@@ -2344,6 +2345,7 @@ function startGame() {
   cityDamage = 0; killFeed = [];
   killCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
   spawnCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
+  shotsFired = 0; shotsHit = 0;
   frame = 0; screenFlash = 0;
   seenTypes = {}; enemyAlert = null;
   currentCityIdx = 0; cityIntroTimer = 0;
@@ -2414,6 +2416,7 @@ function fireInterceptor() {
     return;
   }
   if (!unlimitedAmmo) ammo--;
+  shotsFired++;
   if (!tutorialSeen) { tutorialSeen = true; localStorage.setItem('tutorialSeen', '1'); }
   const speed = 10 * getComboBuffs().speedMult;
   const dx = mouseX - batteryX, dy = mouseY - batteryY;
@@ -2859,7 +2862,7 @@ function update() {
           }
         }
       }
-      if (!detonationHit) resetCombo(); // Miss — reset combo
+      if (detonationHit) shotsHit++; else resetCombo(); // Miss — reset combo
       boom(ic.x, ic.y, '#0088cc', 8);
       interceptors.splice(i, 1); continue;
     }
@@ -2896,7 +2899,7 @@ function update() {
         }
       }
     }
-    if (hit) continue;
+    if (hit) { shotsHit++; continue; }
   }
 
   // Explosions
@@ -4392,34 +4395,37 @@ function drawHUD() {
     ctx.restore();
   }
 
-  // ===== BOTTOM-LEFT: Kill Tally =====
-  const totalSpawns = spawnCounts.rocket + spawnCounts.drone + spawnCounts.ballistic + spawnCounts.decoy;
-  if (totalSpawns > 0 && sirenTimer <= 0 && cityIntroTimer <= 0) {
+  // ===== BOTTOM-LEFT: Kill Tally + Accuracy =====
+  const totalKills = killCounts.rocket + killCounts.drone + killCounts.ballistic + killCounts.decoy;
+  if (totalKills > 0 && sirenTimer <= 0 && cityIntroTimer <= 0) {
     const types = [
       { key: 'rocket', emoji: '🚀', label: 'Rockets' },
       { key: 'drone', emoji: '✈️', label: 'Drones' },
       { key: 'ballistic', emoji: '💣', label: 'Missiles' },
       { key: 'decoy', emoji: '🎆', label: 'Flares' },
-    ].filter(t => spawnCounts[t.key] > 0);
+    ].filter(t => killCounts[t.key] > 0);
 
+    const accuracy = shotsFired > 0 ? Math.round(shotsHit / shotsFired * 100) : 0;
     const kfX = fz(6), kfLineH = fz(14);
-    const kfBgH = types.length * kfLineH + fz(6);
+    const kfBgH = (types.length + 1) * kfLineH + fz(6); // +1 for accuracy line
     const kfBgY = GROUND_Y - fz(6) - kfBgH;
     ctx.fillStyle = 'rgba(0,5,15,0.8)';
-    ctx.beginPath(); ctx.roundRect(kfX - 4, kfBgY, fz(130), kfBgH, 6); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(kfX - 4, kfBgY, fz(115), kfBgH, 6); ctx.fill();
     types.forEach((et, i) => {
       const ey = kfBgY + fz(12) + i * kfLineH;
-      const kills = killCounts[et.key], spawns = spawnCounts[et.key];
-      const pct = spawns > 0 ? Math.round(kills / spawns * 100) : 0;
-      // Emoji
       ctx.font = `${fz(10)}px Arial`;
       ctx.textAlign = 'left';
       ctx.fillText(et.emoji, kfX + 2, ey);
-      // Label + count + pct — all bright white
       ctx.fillStyle = '#fff';
       ctx.font = `bold ${fz(10)}px Arial`;
-      ctx.fillText(`${et.label} — ${kills}/${spawns} — ${pct}%`, kfX + fz(16), ey);
+      ctx.fillText(`${et.label} — ${killCounts[et.key]}`, kfX + fz(16), ey);
     });
+    // Accuracy line
+    const accY = kfBgY + fz(12) + types.length * kfLineH;
+    ctx.fillStyle = accuracy >= 70 ? '#44ff88' : accuracy >= 40 ? '#ffdd44' : '#ff6666';
+    ctx.font = `bold ${fz(10)}px Arial`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`🎯 ${shotsHit}/${shotsFired} — ${accuracy}%`, kfX + 2, accY);
   }
 
   // ===== BOTTOM-RIGHT: Ammo =====
