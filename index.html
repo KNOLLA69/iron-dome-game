@@ -30,6 +30,38 @@
 <meta name="twitter:title" content="Iron Dome — Can You Defend All 5 Cities?">
 <meta name="twitter:description" content="Free browser missile defense game. 15 waves, 5 cities, 4 enemy types. Play instantly — no download.">
 <meta name="twitter:image" content="https://iron-dome-game.com/og-image.png">
+
+<!-- JSON-LD Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Iron Dome — Defend Israel",
+  "alternateName": "כיפת ברזל",
+  "description": "Free browser missile defense game. Defend 5 Israeli cities from rockets, drones, and ballistic missiles across 15 waves.",
+  "url": "https://iron-dome-game.com/",
+  "image": "https://iron-dome-game.com/og-image.png",
+  "genre": ["Missile Defense", "Action", "Strategy"],
+  "gamePlatform": "Web Browser",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any (Browser)",
+  "inLanguage": ["en", "he", "de"],
+  "isAccessibleForFree": true,
+  "playMode": "SinglePlayer",
+  "numberOfPlayers": { "@type": "QuantitativeValue", "value": 1 },
+  "author": {
+    "@type": "Person",
+    "name": "Adrian Knoll",
+    "email": "adrian@tulu.co.il"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  }
+}
+</script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
@@ -59,6 +91,10 @@ canvas { display: block; cursor: crosshair; }
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const dpr = window.devicePixelRatio || 1;
+
+// Embed mode: hide external links, add attribution
+const urlParams = new URLSearchParams(window.location.search);
+const isEmbedMode = urlParams.get('embed') === 'true';
 
 // Detect mobile early for canvas sizing
 const isMobileDevice = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) ||
@@ -4379,9 +4415,9 @@ function drawHUD() {
     ctx.save();
     ctx.translate(W/2, barH + fz(14));
     ctx.scale(pulse, pulse);
-    const tw = ctx.measureText(comboLabel).width || fz(100);
-    const pw = Math.max(fz(75), tw + fz(20)), ph = fz(22);
     ctx.font = `bold ${fz(12)}px Arial`;
+    const tw = ctx.measureText(comboLabel).width;
+    const pw = tw + fz(24), ph = fz(22);
     ctx.fillStyle = 'rgba(0,5,15,0.6)';
     ctx.beginPath(); ctx.roundRect(-pw/2, -ph/2, pw, ph, 10); ctx.fill();
     ctx.strokeStyle = cc + '44';
@@ -4390,7 +4426,6 @@ function drawHUD() {
     ctx.textAlign = 'center';
     ctx.shadowColor = cc; ctx.shadowBlur = 10;
     ctx.fillStyle = cc;
-    ctx.font = `bold ${fz(12)}px Arial`;
     ctx.fillText(comboLabel, 0, fz(5));
     ctx.shadowBlur = 0;
     ctx.restore();
@@ -4410,26 +4445,30 @@ function drawHUD() {
     ].filter(t => killCounts[t.key] > 0);
 
     const accuracy = shotsFired > 0 ? Math.round(shotsHit / shotsFired * 100) : 0;
-    const kfX = fz(6), kfLineH = fz(14);
+    const kfLineH = fz(14);
+    const kfBgW = fz(115);
     const kfBgH = (types.length + 1) * kfLineH + fz(6); // +1 for accuracy line
-    const kfBgY = GROUND_Y - fz(6) - kfBgH;
+    // Mobile: center panel. Desktop: bottom-left.
+    const kfBgX = isMobileDevice ? (W - kfBgW) / 2 : fz(6) - 4;
+    const kfBgY = isMobileDevice ? (H * 0.38 - kfBgH / 2) : (GROUND_Y - fz(6) - kfBgH);
     ctx.fillStyle = 'rgba(0,5,15,0.8)';
-    ctx.beginPath(); ctx.roundRect(kfX - 4, kfBgY, fz(115), kfBgH, 6); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(kfBgX, kfBgY, kfBgW, kfBgH, 6); ctx.fill();
+    const kfContentX = kfBgX + 6;
     types.forEach((et, i) => {
       const ey = kfBgY + fz(12) + i * kfLineH;
       ctx.font = `${fz(10)}px Arial`;
       ctx.textAlign = 'left';
-      ctx.fillText(et.emoji, kfX + 2, ey);
+      ctx.fillText(et.emoji, kfContentX, ey);
       ctx.fillStyle = '#fff';
       ctx.font = `bold ${fz(10)}px Arial`;
-      ctx.fillText(`${et.label} — ${killCounts[et.key]}`, kfX + fz(16), ey);
+      ctx.fillText(`${et.label} — ${killCounts[et.key]}`, kfContentX + fz(14), ey);
     });
     // Accuracy line
     const accY = kfBgY + fz(12) + types.length * kfLineH;
     ctx.fillStyle = accuracy >= 70 ? '#44ff88' : accuracy >= 40 ? '#ffdd44' : '#ff6666';
     ctx.font = `bold ${fz(10)}px Arial`;
     ctx.textAlign = 'left';
-    ctx.fillText(`🎯 ${shotsHit}/${shotsFired} — ${accuracy}%`, kfX + 2, accY);
+    ctx.fillText(`🎯 ${shotsHit}/${shotsFired} — ${accuracy}%`, kfContentX, accY);
   }
 
   // ===== BOTTOM-RIGHT: Ammo =====
@@ -4754,7 +4793,14 @@ function drawMenu() {
   ctx.fillText(`${t('gamesPlayed')}: ${totalPlaysCount.toLocaleString()}`, W/2, curY + pcH*0.7);
   curY += pcH + fz(14);
 
-  // Share buttons
+  // Share buttons (hidden in embed mode — replaced with attribution)
+  if (isEmbedMode) {
+    ctx.fillStyle = '#6688aa';
+    ctx.font = `${fz(11)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText('▶ Play full version at iron-dome-game.com', W/2, curY + fz(6));
+    curY += fz(24);
+  } else {
   ctx.fillStyle = '#6688aa';
   ctx.font = `${fz(11)}px Arial`;
   ctx.fillText(t('shareWith'), W/2, curY);
@@ -4788,7 +4834,10 @@ function drawMenu() {
     ctx.fillText(t('shareCopied'), W/2, curY - fz(6));
   }
 
-  // Legal links at bottom
+  } // end share buttons (embed check)
+
+  // Legal links at bottom (hidden in embed mode)
+  if (!isEmbedMode) {
   const legalLinks = [
     { label: t('terms'), tab: 'terms' },
     { label: t('privacy'), tab: 'privacy' },
@@ -4814,6 +4863,7 @@ function drawMenu() {
       legalCurX += sepW;
     }
   });
+  } // end legal links (embed check)
 
   // Instructions (small, above buttons)
   // (removed from main view to keep clean - instructions show in game HUD area now)
