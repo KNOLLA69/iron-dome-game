@@ -1758,6 +1758,7 @@ let cityDamage = 0; // damage taken by current city (accumulates over 3 waves)
 let cityMaxHP = 5; // endurance per city (varies by city)
 let killFeed = []; // legacy
 let killCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
+let spawnCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
 let shieldHP = 0; // shield blocks
 // Play counter
 let totalPlaysCount = 0;
@@ -2342,6 +2343,7 @@ function startGame() {
   powerUps = []; activePower = null; activePowerTimer = 0;
   cityDamage = 0; killFeed = [];
   killCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
+  spawnCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
   frame = 0; screenFlash = 0;
   seenTypes = {}; enemyAlert = null;
   currentCityIdx = 0; cityIntroTimer = 0;
@@ -2526,6 +2528,7 @@ function spawnMissile(forceType) {
     flashTimer: 0
   };
   missiles.push(m);
+  if (spawnCounts[type] !== undefined) spawnCounts[type]++;
   // Enemy type first-appearance callout
   if (!seenTypes[type]) {
     seenTypes[type] = true;
@@ -2543,7 +2546,7 @@ function spawnMissile(forceType) {
 }
 
 function addCombo() {
-  combo++; comboTimer = 120;
+  combo++; comboTimer = 999;
   if (combo > maxCombo) maxCombo = combo;
   if (combo >= 3) playSound('combo');
   // Spawn power-up at every x5 combo
@@ -2672,7 +2675,7 @@ function update() {
   if (state !== 'playing') return;
   if (paused) return;
 
-  if (comboTimer > 0) { comboTimer--; if (comboTimer <= 0) resetCombo(); }
+  // Combo resets on miss, not on timer
   if (enemyAlert && enemyAlert.timer > 0) enemyAlert.timer--;
   if (screenFlash > 0) screenFlash -= 0.04;
 
@@ -2833,10 +2836,12 @@ function update() {
     const dT = Math.sqrt((ic.x-ic.targetX)**2 + (ic.y-ic.targetY)**2);
     if (dT < 15 || ic.x < -10 || ic.x > W+10 || ic.y < -10) {
       // Detonation blast radius - check for nearby missiles
+      let detonationHit = false;
       for (let j = missiles.length-1; j >= 0; j--) {
         const m = missiles[j];
         const bd = Math.sqrt((ic.x-m.x)**2 + (ic.y-m.y)**2);
         if (bd < getComboBuffs().blastRadius) {
+          detonationHit = true;
           m.hp--;
           if (m.hp <= 0) {
             addCombo();
@@ -2845,6 +2850,7 @@ function update() {
             score += pts;
             boom(m.x, m.y, '#00ff88', 20);
             addFloat(m.x, m.y-10, `+${pts}`, '#00ff88', 16);
+            if (killCounts[m.type] !== undefined) killCounts[m.type]++;
             missiles.splice(j, 1);
           } else {
             m.flashTimer = 8;
@@ -2853,6 +2859,7 @@ function update() {
           }
         }
       }
+      if (!detonationHit) resetCombo(); // Miss — reset combo
       boom(ic.x, ic.y, '#0088cc', 8);
       interceptors.splice(i, 1); continue;
     }
@@ -4362,61 +4369,56 @@ function drawHUD() {
     ctx.fillText(`${pwIcon} ${pwSecs}s`, fz(9), py + fz(10));
   }
 
-  // ===== COMBO (center pill) =====
+  // ===== COMBO (center, bigger — resets on miss not timer) =====
   if (combo >= 2) {
     const mult = getMultiplier();
-    const pulse = 1 + Math.sin(frame*0.15)*0.03;
+    const pulse = 1 + Math.sin(frame*0.12)*0.04;
     const cc = combo >= 10 ? '#ff55ff' : combo >= 6 ? '#ffaa00' : '#ffdd00';
     ctx.save();
-    ctx.translate(W/2, barH + fz(10));
+    ctx.translate(W/2, barH + fz(14));
     ctx.scale(pulse, pulse);
-    const pw = fz(55), ph = fz(16);
-    ctx.fillStyle = 'rgba(255,200,0,0.12)';
-    ctx.beginPath(); ctx.roundRect(-pw/2, -ph/2, pw, ph, 8); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,200,0,0.22)';
+    const pw = fz(75), ph = fz(22);
+    ctx.fillStyle = 'rgba(0,5,15,0.6)';
+    ctx.beginPath(); ctx.roundRect(-pw/2, -ph/2, pw, ph, 10); ctx.fill();
+    ctx.strokeStyle = cc + '44';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.roundRect(-pw/2, -ph/2, pw, ph, 8); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(-pw/2, -ph/2, pw, ph, 10); ctx.stroke();
     ctx.textAlign = 'center';
+    ctx.shadowColor = cc; ctx.shadowBlur = 10;
     ctx.fillStyle = cc;
-    ctx.font = `bold ${fz(10)}px Arial`;
-    ctx.fillText(`🔥x${combo}${mult > 1 ? ' ×'+mult : ''}`, 0, fz(4));
+    ctx.font = `bold ${fz(14)}px Arial`;
+    ctx.fillText(`🔥 x${combo}${mult > 1 ? '  ×'+mult : ''}`, 0, fz(5));
+    ctx.shadowBlur = 0;
     ctx.restore();
-    if (comboTimer > 0) {
-      const cbw = fz(38), cbh = 2;
-      const cbx = W/2 - cbw/2, cby = barH + fz(19);
-      ctx.fillStyle = 'rgba(255,200,0,0.1)';
-      ctx.fillRect(cbx, cby, cbw, cbh);
-      ctx.fillStyle = cc;
-      ctx.fillRect(cbx, cby, cbw*(comboTimer/120), cbh);
-    }
   }
 
   // ===== BOTTOM-LEFT: Kill Tally =====
-  const totalKills = killCounts.rocket + killCounts.drone + killCounts.ballistic + killCounts.decoy;
-  if (totalKills > 0 && sirenTimer <= 0 && cityIntroTimer <= 0) {
+  const totalSpawns = spawnCounts.rocket + spawnCounts.drone + spawnCounts.ballistic + spawnCounts.decoy;
+  if (totalSpawns > 0 && sirenTimer <= 0 && cityIntroTimer <= 0) {
     const types = [
       { key: 'rocket', emoji: '🚀', label: 'Rockets' },
       { key: 'drone', emoji: '✈️', label: 'Drones' },
       { key: 'ballistic', emoji: '💣', label: 'Missiles' },
       { key: 'decoy', emoji: '🎆', label: 'Flares' },
-    ].filter(t => killCounts[t.key] > 0);
+    ].filter(t => spawnCounts[t.key] > 0);
 
-    const kfX = fz(6), kfLineH = fz(13);
+    const kfX = fz(6), kfLineH = fz(14);
     const kfBgH = types.length * kfLineH + fz(6);
     const kfBgY = GROUND_Y - fz(6) - kfBgH;
-    ctx.fillStyle = 'rgba(0,5,15,0.75)';
-    ctx.beginPath(); ctx.roundRect(kfX - 4, kfBgY, fz(80), kfBgH, 6); ctx.fill();
+    ctx.fillStyle = 'rgba(0,5,15,0.8)';
+    ctx.beginPath(); ctx.roundRect(kfX - 4, kfBgY, fz(130), kfBgH, 6); ctx.fill();
     types.forEach((et, i) => {
       const ey = kfBgY + fz(12) + i * kfLineH;
+      const kills = killCounts[et.key], spawns = spawnCounts[et.key];
+      const pct = spawns > 0 ? Math.round(kills / spawns * 100) : 0;
+      // Emoji
       ctx.font = `${fz(10)}px Arial`;
       ctx.textAlign = 'left';
       ctx.fillText(et.emoji, kfX + 2, ey);
-      ctx.fillStyle = '#dde8ff';
-      ctx.font = `bold ${fz(9)}px Arial`;
-      ctx.fillText(`${killCounts[et.key]}`, kfX + fz(16), ey);
-      ctx.fillStyle = 'rgba(180,210,240,0.5)';
-      ctx.font = `${fz(8)}px Arial`;
-      ctx.fillText(et.label, kfX + fz(28), ey);
+      // Label + count + pct — all bright white
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${fz(10)}px Arial`;
+      ctx.fillText(`${et.label} — ${kills}/${spawns} — ${pct}%`, kfX + fz(16), ey);
     });
   }
 
