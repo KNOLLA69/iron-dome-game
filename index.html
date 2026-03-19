@@ -4276,251 +4276,171 @@ function drawCityIntro() {
 }
 
 function drawHUD() {
-  const pad = fz(8);
-
-  // ===== TOP-LEFT PANEL: City Defense =====
-  const tlW = fz(160), tlH = fz(48);
-  const tlX = pad, tlY = pad;
-  drawGlassPanel(tlX, tlY, tlW, tlH, fz(10));
-
-  // Shield icon box
-  const iconS = fz(20);
-  const iconX = tlX + fz(8), iconY = tlY + (tlH - iconS) / 2;
+  // fz() for ALL text (scales 1.6x on mobile for readability)
+  // Raw px for panel dimensions (stays compact on mobile)
   const endRatio = cityMaxHP > 0 ? Math.max(0, 1 - cityDamage / cityMaxHP) : 1;
-  const iconGrad = ctx.createLinearGradient(iconX, iconY, iconX + iconS, iconY + iconS);
-  iconGrad.addColorStop(0, endRatio > 0.6 ? '#1a6040' : endRatio > 0.3 ? '#6a5020' : '#6a2020');
-  iconGrad.addColorStop(1, endRatio > 0.6 ? '#22dd77' : endRatio > 0.3 ? '#ffcc33' : '#ff4444');
-  ctx.fillStyle = iconGrad;
-  ctx.beginPath(); ctx.roundRect(iconX, iconY, iconS, iconS, fz(4)); ctx.fill();
-  ctx.font = `${fz(11)}px Arial`;
-  ctx.textAlign = 'center';
-  ctx.fillText('🛡️', iconX + iconS/2, iconY + iconS * 0.72);
-
-  // City name + wave badge
-  const infoX = iconX + iconS + fz(6);
+  const hpColors = endRatio > 0.6 ? ['#22dd77','#00aa55'] : endRatio > 0.3 ? ['#ffcc33','#dd8800'] : ['#ff5555','#cc2222'];
   const cName = CITIES[currentCityIdx] ? (CITIES[currentCityIdx].name[currentLang] || CITIES[currentCityIdx].name.en) : '';
   const displayWave = waveState === 'siren_intro' ? wave + 1 : wave;
-  ctx.fillStyle = '#e8f0ff';
-  ctx.font = `bold ${fz(12)}px Arial`;
-  ctx.textAlign = 'left';
-  ctx.fillText(cName, infoX, tlY + fz(16));
-  // Wave badge
-  const wBadge = `W${displayWave}`;
-  const wbX = infoX + ctx.measureText(cName).width + fz(5);
-  ctx.fillStyle = 'rgba(60,100,160,0.25)';
-  const wbW = ctx.measureText(wBadge).width + fz(8);
-  ctx.beginPath(); ctx.roundRect(wbX, tlY + fz(7), wbW, fz(12), 3); ctx.fill();
-  ctx.fillStyle = 'rgba(150,200,255,0.6)';
-  ctx.font = `bold ${fz(8)}px Arial`;
-  ctx.fillText(wBadge, wbX + fz(4), tlY + fz(16));
 
-  // HP bar
-  const barX = infoX, barY = tlY + fz(22), barW = tlW - (infoX - tlX) - fz(8), barH = fz(8);
-  const hpColors = endRatio > 0.6 ? ['#22dd77','#00aa55'] : endRatio > 0.3 ? ['#ffcc33','#dd8800'] : ['#ff5555','#cc2222'];
-  drawGradBar(barX, barY, barW, barH, endRatio, hpColors);
-  // HP text
-  ctx.fillStyle = endRatio > 0.3 ? '#c0d0e8' : '#ff6666';
-  ctx.font = `bold ${fz(9)}px Arial`;
-  ctx.textAlign = 'left';
-  ctx.fillText(`${cityDamage}/${cityMaxHP}`, barX + barW + fz(3), barY + barH - 1);
+  // ===== SLIM TOP BAR =====
+  const barH = fz(32);
+  ctx.fillStyle = 'rgba(0, 8, 20, 0.65)';
+  ctx.fillRect(0, 0, W, barH);
+  const edgeGrad = ctx.createLinearGradient(0, barH - 1, 0, barH + 1);
+  edgeGrad.addColorStop(0, 'rgba(80, 160, 255, 0.12)');
+  edgeGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = edgeGrad;
+  ctx.fillRect(0, barH - 1, W, 2);
 
-  // ===== TOP-CENTER: Pause Button =====
-  const pbS = fz(24);
-  const pbX = W/2 - pbS/2, pbY = pad;
+  // -- Pause button (left edge) --
+  const pbS = fz(16);
+  const pbX = fz(4), pbY = (barH - pbS) / 2;
   pauseBtnRect = { x: pbX, y: pbY, w: pbS, h: pbS };
-  ctx.fillStyle = 'rgba(40,55,80,0.5)';
-  ctx.beginPath(); ctx.roundRect(pbX, pbY, pbS, pbS, fz(6)); ctx.fill();
-  ctx.strokeStyle = 'rgba(100,160,255,0.12)';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.roundRect(pbX, pbY, pbS, pbS, fz(6)); ctx.stroke();
-  ctx.fillStyle = 'rgba(180,210,255,0.5)';
-  const pBarW = pbS * 0.14, pBarH = pbS * 0.45;
-  ctx.fillRect(pbX + pbS*0.28, pbY + pbS*0.28, pBarW, pBarH);
-  ctx.fillRect(pbX + pbS*0.56, pbY + pbS*0.28, pBarW, pBarH);
+  ctx.fillStyle = 'rgba(50,60,80,0.4)';
+  ctx.beginPath(); ctx.roundRect(pbX, pbY, pbS, pbS, 3); ctx.fill();
+  ctx.fillStyle = 'rgba(180,200,230,0.6)';
+  ctx.fillRect(pbX + pbS*0.28, pbY + pbS*0.28, pbS*0.14, pbS*0.44);
+  ctx.fillRect(pbX + pbS*0.56, pbY + pbS*0.28, pbS*0.14, pbS*0.44);
 
-  // ===== TOP-RIGHT PANEL: Score =====
-  const trW = fz(90), trH = fz(42);
-  const trX = W - pad - trW, trY = pad;
-  drawGlassPanel(trX, trY, trW, trH, fz(10));
-  // Score number
-  ctx.save();
-  ctx.shadowColor = 'rgba(100, 200, 255, 0.5)';
-  ctx.shadowBlur = 14;
-  ctx.fillStyle = '#fff';
-  ctx.font = `bold ${fz(22)}px Arial`;
-  ctx.textAlign = 'right';
-  ctx.fillText(`${score}`, trX + trW - fz(10), trY + fz(26));
-  ctx.shadowBlur = 0;
-  ctx.restore();
-  // SCORE label
-  ctx.fillStyle = 'rgba(150,180,220,0.4)';
+  // -- City name + wave + HP bar --
+  const ciX = pbX + pbS + fz(6);
+  ctx.fillStyle = '#dde8ff';
+  ctx.font = `bold ${fz(11)}px Arial`;
+  ctx.textAlign = 'left';
+  ctx.fillText(cName, ciX, barH * 0.46);
+  // Wave badge inline
+  const nameW = ctx.measureText(cName).width;
+  ctx.fillStyle = 'rgba(120,180,240,0.55)';
   ctx.font = `bold ${fz(7)}px Arial`;
-  ctx.textAlign = 'right';
-  ctx.fillText(t('score').toUpperCase(), trX + trW - fz(10), trY + fz(36));
-
-  // ===== BELOW TOP-LEFT: Active Power-Ups =====
-  let pillY = tlY + tlH + fz(4);
-  if (shieldHP > 0 || (activePower && activePowerTimer > 0)) {
-    const pillX = pad;
-    let px = pillX;
-    if (shieldHP > 0) {
-      const pillW = fz(50), pillH = fz(14);
-      ctx.fillStyle = 'rgba(60,180,255,0.15)';
-      ctx.beginPath(); ctx.roundRect(px, pillY, pillW, pillH, fz(4)); ctx.fill();
-      ctx.strokeStyle = 'rgba(100,200,255,0.15)';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.roundRect(px, pillY, pillW, pillH, fz(4)); ctx.stroke();
-      ctx.fillStyle = '#66ddff';
-      ctx.font = `bold ${fz(8)}px Arial`;
-      ctx.textAlign = 'left';
-      ctx.fillText('🛡️ Shield', px + fz(4), pillY + fz(10));
-      px += pillW + fz(4);
-    }
-    if (activePower && activePowerTimer > 0) {
-      const pwSecs = Math.ceil(activePowerTimer / 60);
-      const pwIcon = activePower === 'rapid' ? '⚡' : '💥';
-      const pwLabel = `${pwIcon} ${pwSecs}s`;
-      const pillW = fz(46), pillH = fz(14);
-      ctx.fillStyle = 'rgba(255,170,50,0.12)';
-      ctx.beginPath(); ctx.roundRect(px, pillY, pillW, pillH, fz(4)); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,180,60,0.15)';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.roundRect(px, pillY, pillW, pillH, fz(4)); ctx.stroke();
-      ctx.fillStyle = '#ffaa33';
-      ctx.font = `bold ${fz(8)}px Arial`;
-      ctx.textAlign = 'left';
-      ctx.fillText(pwLabel, px + fz(4), pillY + fz(10));
-    }
+  ctx.fillText(`W${displayWave}`, ciX + nameW + fz(4), barH * 0.43);
+  // HP bar — compact
+  const hpX = ciX, hpY = barH * 0.58, hpW = fz(75), hpH = fz(4);
+  drawGradBar(hpX, hpY, hpW, hpH, endRatio, hpColors);
+  // HP text
+  ctx.fillStyle = endRatio > 0.3 ? 'rgba(180,210,240,0.7)' : '#ff6666';
+  ctx.font = `bold ${fz(7)}px Arial`;
+  ctx.textAlign = 'left';
+  ctx.fillText(`${cityDamage}/${cityMaxHP}`, hpX + hpW + fz(3), hpY + hpH + 1);
+  // Shield indicator
+  if (shieldHP > 0) {
+    ctx.font = `${fz(8)}px Arial`;
+    ctx.fillText('🛡️', hpX + hpW + fz(20), hpY + hpH + 1);
   }
 
-  // ===== COMBO (floating center pill) =====
+  // -- Wave info (center) --
+  ctx.fillStyle = 'rgba(100,180,255,0.5)';
+  ctx.font = `${fz(8)}px Arial`;
+  ctx.textAlign = 'center';
+  const missilesInPlay = waveMissilesLeft + missiles.length;
+  if (waveState === 'playing' && missilesInPlay > 0) {
+    ctx.fillText(`${missilesInPlay} ${t('missiles')}`, W/2, barH * 0.6);
+  }
+
+  // -- Score (right) --
+  ctx.save();
+  ctx.textAlign = 'right';
+  const sX = W - fz(8);
+  ctx.shadowColor = 'rgba(100, 200, 255, 0.4)';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${fz(18)}px Arial`;
+  ctx.fillText(`${score}`, sX, barH * 0.62);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+  ctx.fillStyle = 'rgba(150,180,220,0.35)';
+  ctx.font = `bold ${fz(6)}px Arial`;
+  ctx.textAlign = 'right';
+  ctx.fillText(t('score').toUpperCase(), sX, barH * 0.88);
+
+  // ===== ACTIVE POWER-UPS (tiny pills below bar) =====
+  if (activePower && activePowerTimer > 0) {
+    const py = barH + 2;
+    const pwSecs = Math.ceil(activePowerTimer / 60);
+    const pwIcon = activePower === 'rapid' ? '⚡' : '💥';
+    ctx.fillStyle = 'rgba(255,170,50,0.18)';
+    ctx.beginPath(); ctx.roundRect(fz(4), py, fz(30), fz(10), 3); ctx.fill();
+    ctx.fillStyle = '#ffaa33';
+    ctx.font = `bold ${fz(7)}px Arial`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`${pwIcon} ${pwSecs}s`, fz(6), py + fz(8));
+  }
+
+  // ===== COMBO (compact center pill) =====
   if (combo >= 2) {
     const mult = getMultiplier();
     const pulse = 1 + Math.sin(frame*0.15)*0.03;
-    const comboColor = combo >= 10 ? '#ff55ff' : combo >= 6 ? '#ffaa00' : '#ffdd00';
-    const comboBgColor = combo >= 10 ? 'rgba(255,80,255,0.12)' : combo >= 6 ? 'rgba(255,170,0,0.12)' : 'rgba(255,220,0,0.1)';
-    const comboBorderColor = combo >= 10 ? 'rgba(255,80,255,0.25)' : combo >= 6 ? 'rgba(255,170,0,0.2)' : 'rgba(255,220,0,0.18)';
+    const cc = combo >= 10 ? '#ff55ff' : combo >= 6 ? '#ffaa00' : '#ffdd00';
 
     ctx.save();
-    const comboY = tlY + tlH + fz(6);
-    ctx.translate(W/2, comboY);
+    ctx.translate(W/2, barH + fz(8));
     ctx.scale(pulse, pulse);
-
-    // Pill background
-    const pillW = fz(70), pillH = fz(18);
-    ctx.fillStyle = comboBgColor;
-    ctx.beginPath(); ctx.roundRect(-pillW/2, -pillH/2, pillW, pillH, fz(10)); ctx.fill();
-    ctx.strokeStyle = comboBorderColor;
+    const pw = fz(42), ph = fz(12);
+    ctx.fillStyle = 'rgba(255,200,0,0.12)';
+    ctx.beginPath(); ctx.roundRect(-pw/2, -ph/2, pw, ph, 6); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,200,0,0.2)';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.roundRect(-pillW/2, -pillH/2, pillW, pillH, fz(10)); ctx.stroke();
-
-    // Fire + combo text
+    ctx.beginPath(); ctx.roundRect(-pw/2, -ph/2, pw, ph, 6); ctx.stroke();
     ctx.textAlign = 'center';
-    ctx.font = `${fz(10)}px Arial`;
-    ctx.fillText('🔥', -pillW/2 + fz(12), fz(4));
-    ctx.fillStyle = comboColor;
-    ctx.font = `bold ${fz(11)}px Arial`;
-    ctx.shadowColor = comboColor;
-    ctx.shadowBlur = 8;
-    ctx.fillText(`x${combo}`, 0, fz(4));
-    ctx.shadowBlur = 0;
-
-    // Multiplier badge
-    if (mult > 1) {
-      const mbW = fz(20), mbH = fz(10);
-      const mbX = pillW/2 - fz(16) - mbW/2;
-      ctx.fillStyle = 'rgba(255,200,0,0.25)';
-      ctx.beginPath(); ctx.roundRect(mbX, -mbH/2, mbW, mbH, 3); ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.font = `bold ${fz(7)}px Arial`;
-      ctx.fillText(`x${mult}`, mbX + mbW/2, fz(3));
-    }
+    ctx.fillStyle = cc;
+    ctx.font = `bold ${fz(8)}px Arial`;
+    ctx.fillText(`🔥x${combo}${mult > 1 ? ' ×'+mult : ''}`, 0, fz(3));
     ctx.restore();
 
-    // Timer bar
     if (comboTimer > 0) {
-      const cbw = fz(45), cbh = 2;
-      const cbx = W/2 - cbw/2, cby = tlY + tlH + fz(16);
-      ctx.fillStyle = 'rgba(255,200,0,0.12)';
+      const cbw = fz(30), cbh = 2;
+      const cbx = W/2 - cbw/2, cby = barH + fz(15);
+      ctx.fillStyle = 'rgba(255,200,0,0.1)';
       ctx.fillRect(cbx, cby, cbw, cbh);
-      ctx.fillStyle = comboColor;
+      ctx.fillStyle = cc;
       ctx.fillRect(cbx, cby, cbw*(comboTimer/120), cbh);
     }
   }
 
-  // ===== BOTTOM-LEFT PANEL: Kill Feed =====
+  // ===== BOTTOM-LEFT: Kill Feed (text with shadow, no panel) =====
   if (killFeed.length > 0 && sirenTimer <= 0 && cityIntroTimer <= 0) {
     const kfEntries = Math.min(killFeed.length, 3);
-    const kfH = fz(10) + kfEntries * fz(14);
-    const kfW = fz(110), kfX = pad, kfY = GROUND_Y - fz(20) - kfH;
-    drawGlassPanel(kfX, kfY, kfW, kfH, fz(8));
     for (let i = 0; i < kfEntries; i++) {
       const kf = killFeed[i];
-      const alpha = i === 0 ? 1 : i === 1 ? 0.6 : 0.3;
-      const entryY = kfY + fz(10) + i * fz(14);
-      ctx.globalAlpha = alpha;
-      // Emoji
-      ctx.font = `${fz(9)}px Arial`;
-      ctx.textAlign = 'left';
-      ctx.fillText(kf.emoji || '🎯', kfX + fz(6), entryY);
-      // Type name
-      ctx.fillStyle = kf.color || '#aaa';
-      ctx.font = `bold ${fz(9)}px Arial`;
-      ctx.fillText(kf.type || '', kfX + fz(18), entryY);
-      // Points
-      ctx.fillStyle = '#44dd88';
+      ctx.globalAlpha = i === 0 ? 0.8 : i === 1 ? 0.4 : 0.2;
       ctx.font = `bold ${fz(8)}px Arial`;
-      ctx.textAlign = 'right';
-      ctx.fillText(`+${kf.pts || 0}`, kfX + kfW - fz(6), entryY);
+      ctx.textAlign = 'left';
+      ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 3;
+      ctx.fillStyle = kf.color || '#aaa';
+      ctx.fillText(`${kf.emoji||'🎯'} ${kf.type} +${kf.pts}`, fz(4), GROUND_Y - fz(6) - i * fz(10));
+      ctx.shadowBlur = 0;
     }
     ctx.globalAlpha = 1;
   }
 
-  // ===== BOTTOM-RIGHT PANEL: Ammo =====
+  // ===== BOTTOM-RIGHT: Ammo (compact pill) =====
   if (sirenTimer <= 0 && cityIntroTimer <= 0) {
     const ammoRatio = maxAmmo > 0 ? ammo / maxAmmo : 0;
-    const arW = fz(140), arH = fz(42);
-    const arX = W - pad - arW, arY = GROUND_Y - fz(20) - arH;
-    drawGlassPanel(arX, arY, arW, arH, fz(10));
+    const aW = fz(72), aH = fz(18);
+    const aX = W - fz(4) - aW, aY = GROUND_Y - fz(6) - aH;
 
-    // Ammo icon box
-    const aiS = fz(18);
-    const aiX = arX + fz(8), aiY = arY + fz(6);
-    const aiGrad = ctx.createLinearGradient(aiX, aiY, aiX + aiS, aiY + aiS);
-    aiGrad.addColorStop(0, '#1a4060');
-    aiGrad.addColorStop(1, '#2288cc');
-    ctx.fillStyle = aiGrad;
-    ctx.beginPath(); ctx.roundRect(aiX, aiY, aiS, aiS, fz(4)); ctx.fill();
-    ctx.font = `${fz(10)}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.fillText('🎯', aiX + aiS/2, aiY + aiS * 0.72);
+    ctx.fillStyle = 'rgba(0,10,25,0.6)';
+    ctx.beginPath(); ctx.roundRect(aX, aY, aW, aH, 5); ctx.fill();
 
-    // Ammo label
-    ctx.fillStyle = 'rgba(180,210,255,0.55)';
-    ctx.font = `bold ${fz(8)}px Arial`;
-    ctx.textAlign = 'left';
-    ctx.fillText(t('ammo').toUpperCase(), aiX + aiS + fz(5), aiY + fz(8));
-
-    // Ammo count
-    ctx.fillStyle = ammoRatio > 0.2 ? '#e0ecff' : '#ff6666';
-    ctx.font = `bold ${fz(14)}px Arial`;
+    // Count
+    ctx.fillStyle = ammoRatio > 0.2 ? '#dde8ff' : '#ff6666';
+    ctx.font = `bold ${fz(10)}px Arial`;
     ctx.textAlign = 'right';
-    ctx.fillText(`${ammo}/${maxAmmo}`, arX + arW - fz(8), aiY + fz(13));
+    ctx.fillText(`🎯 ${ammo}/${maxAmmo}`, aX + aW - fz(4), aY + fz(10));
 
-    // Ammo bar
-    const abX = arX + fz(8), abY = arY + fz(28), abW = arW - fz(16), abH = fz(6);
-    const ammoColors = ammoRatio > 0.5 ? ['#22dd77','#00aa55'] : ammoRatio > 0.2 ? ['#ffcc33','#dd8800'] : ['#ff5555','#cc2222'];
-    drawGradBar(abX, abY, abW, abH, ammoRatio, ammoColors);
+    // Bar
+    const abH = fz(3);
+    drawGradBar(aX + 3, aY + aH - abH - 2, aW - 6, abH, ammoRatio,
+      ammoRatio > 0.5 ? ['#22dd77','#00aa55'] : ammoRatio > 0.2 ? ['#ffcc33','#dd8800'] : ['#ff5555','#cc2222']);
 
-    // Out of ammo warning
-    if (ammo <= 0 && state === 'playing') {
-      const blink = Math.sin(frame * 0.15) > 0;
-      if (blink) {
-        ctx.fillStyle = '#ff3333';
-        ctx.font = `bold ${fz(11)}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.fillText(t('outOfAmmo'), arX + arW/2, arY - fz(6));
-      }
+    // Out of ammo
+    if (ammo <= 0 && state === 'playing' && Math.sin(frame * 0.15) > 0) {
+      ctx.fillStyle = '#ff3333';
+      ctx.font = `bold ${fz(10)}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 5;
+      ctx.fillText(t('outOfAmmo'), W/2, GROUND_Y - fz(25));
+      ctx.shadowBlur = 0;
     }
   }
 
