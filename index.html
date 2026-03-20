@@ -2241,9 +2241,11 @@ function isInBtn(x, y, r) {
 
 function handleClick() {
   if (audioCtx.state === 'suspended') audioCtx.resume();
-  // Check language buttons on any screen
-  for (const lb of langBtnRects) {
-    if (isInBtn(mouseX, mouseY, lb)) { setLang(lb.lang); return; }
+  // Check language buttons on any screen (but not when legal overlay covers them)
+  if (!showLegalOverlay) {
+    for (const lb of langBtnRects) {
+      if (isInBtn(mouseX, mouseY, lb)) { setLang(lb.lang); return; }
+    }
   }
   if (state === 'menu') {
     if (showLeaderboard) { showLeaderboard = false; return; }
