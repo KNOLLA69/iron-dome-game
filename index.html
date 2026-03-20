@@ -2387,10 +2387,27 @@ canvas.addEventListener('click', () => {
   handleClick();
 });
 
+// Wheel scroll for legal overlay
+canvas.addEventListener('wheel', (e) => {
+  if (showLegalOverlay) {
+    e.preventDefault();
+    legalScrollY = Math.max(0, legalScrollY + e.deltaY * 0.8);
+  }
+}, { passive: false });
+
 // Touch events (mobile)
+let legalTouchStartY = 0;
+let legalTouchScrolling = false;
 canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
   const touch = e.touches[0];
+  if (showLegalOverlay) {
+    legalTouchStartY = touch.clientY;
+    legalTouchScrolling = true;
+    updateAim(touch.clientX, touch.clientY);
+    handleClick();
+    return;
+  }
   updateAim(touch.clientX, touch.clientY);
   handleClick();
 }, { passive: false });
@@ -2399,11 +2416,18 @@ let touchFireInterval = null;
 canvas.addEventListener('touchmove', (e) => {
   e.preventDefault();
   const touch = e.touches[0];
+  if (showLegalOverlay && legalTouchScrolling) {
+    const dy = legalTouchStartY - touch.clientY;
+    legalScrollY = Math.max(0, legalScrollY + dy);
+    legalTouchStartY = touch.clientY;
+    return;
+  }
   updateAim(touch.clientX, touch.clientY);
 }, { passive: false });
 
 canvas.addEventListener('touchend', (e) => {
   e.preventDefault();
+  legalTouchScrolling = false;
   if (touchFireInterval) { clearInterval(touchFireInterval); touchFireInterval = null; }
 }, { passive: false });
 
@@ -4983,39 +5007,210 @@ function drawLegalOverlay() {
   if (legalTab === 'terms') {
     lines = [
       '--- ' + t('terms') + ' ---',
-      '', 'Entity: Adrian Knoll',
-      '', '1. This game is provided free of charge, as-is.',
-      '2. No warranty is expressed or implied.',
-      '3. The developer is not liable for any damages.',
-      '4. Leaderboard entries must use appropriate names.',
-      '5. We reserve the right to modify or remove content.',
-      '6. Age 13+ recommended.',
-      '7. By playing, you agree to these terms.',
+      '',
+      'Last updated: March 20, 2026',
+      'Operator: Adrian Knoll ("we", "us", "our")',
+      '',
+      '1. ACCEPTANCE OF TERMS',
+      'By accessing or playing this game, you agree to',
+      'be bound by these Terms & Conditions. If you do',
+      'not agree, please close the game immediately.',
+      '',
+      '2. DESCRIPTION OF SERVICE',
+      'This is a free, browser-based game provided for',
+      'educational and entertainment purposes. No account',
+      'registration is required. Leaderboard submission',
+      'is optional.',
+      '',
+      '3. ELIGIBILITY',
+      'This game is intended for users aged 13 and older.',
+      'If you are under 13, do not submit your name to',
+      'the leaderboard or interact with any online features.',
+      'If you are between 13-16 and located in the EU/EEA,',
+      'parental consent may be required under GDPR.',
+      '',
+      '4. USER CONDUCT',
+      'Leaderboard names must not contain offensive,',
+      'discriminatory, or inappropriate content. We reserve',
+      'the right to remove any leaderboard entry at our',
+      'sole discretion without notice.',
+      '',
+      '5. INTELLECTUAL PROPERTY',
+      '"Iron Dome" is a registered trademark of Rafael',
+      'Advanced Defense Systems Ltd. This game is an',
+      'independent fan project and is not endorsed by,',
+      'affiliated with, or sponsored by Rafael, the IDF,',
+      'or the State of Israel. All original game code,',
+      'art, and audio are (c) Adrian Knoll.',
+      '',
+      '6. NO WARRANTY',
+      'This game is provided "AS IS" without warranty of',
+      'any kind, express or implied, including but not',
+      'limited to warranties of merchantability, fitness',
+      'for a particular purpose, or non-infringement.',
+      '',
+      '7. LIMITATION OF LIABILITY',
+      'To the maximum extent permitted by law, we shall',
+      'not be liable for any indirect, incidental, special,',
+      'consequential, or punitive damages, or any loss of',
+      'data, use, or profits arising from your use of or',
+      'inability to use this game.',
+      '',
+      '8. MODIFICATIONS',
+      'We reserve the right to modify these terms, the',
+      'game content, or any features at any time without',
+      'prior notice. Continued use after changes constitutes',
+      'acceptance of the modified terms.',
+      '',
+      '9. GOVERNING LAW',
+      'These terms are governed by the laws of the State',
+      'of Israel, without regard to conflict-of-law',
+      'provisions. Any disputes shall be resolved in the',
+      'competent courts of Tel Aviv-Jaffa.',
+      '',
+      '10. CONTACT',
+      'For questions about these terms, contact:',
+      'adrian.knoll [at] gmail.com',
     ];
   } else if (legalTab === 'privacy') {
     lines = [
       '--- ' + t('privacy') + ' ---',
-      '', 'Entity: Adrian Knoll',
-      '', 'Data collected:',
-      '- Firebase: leaderboard names, scores, wave, country',
-      '- Umami: anonymous page view analytics (no cookies)',
-      '- localStorage: high score, language preference',
-      '', 'IP address is used only for country detection',
-      'and is not stored by us.',
-      '', 'No personal data is sold or shared with third parties.',
-      '', 'Country detection: api.country.is (privacy-friendly)',
+      '',
+      'Last updated: March 20, 2026',
+      'Data Controller: Adrian Knoll',
+      'Contact: adrian.knoll [at] gmail.com',
+      '',
+      '1. OVERVIEW',
+      'We are committed to protecting your privacy.',
+      'This policy explains what data we collect, why,',
+      'and how it is handled when you play this game.',
+      '',
+      '2. DATA WE COLLECT',
+      '',
+      'a) Leaderboard Data (optional, user-initiated):',
+      '   - Display name (you choose what to enter)',
+      '   - Game score, wave reached',
+      '   - Country (auto-detected, see below)',
+      '   Stored in: Google Firebase Realtime Database',
+      '   Retention: Indefinite (top scores only)',
+      '',
+      'b) Analytics (automatic, anonymous):',
+      '   - Page views and game events (start, end)',
+      '   - No cookies, no fingerprinting, no personal data',
+      '   Provider: Umami Cloud (EU-hosted, GDPR-compliant)',
+      '   umami.is — privacy-focused, open-source analytics',
+      '',
+      'c) Country Detection (automatic, one-time):',
+      '   - Your IP is sent to api.country.is to determine',
+      '     your country code for leaderboard display.',
+      '   - IP is NOT stored by us or logged.',
+      '   - api.country.is privacy: no logging, no tracking.',
+      '',
+      'd) Local Storage (your device only):',
+      '   - High score, language preference, tutorial flag',
+      '   - This data never leaves your browser.',
+      '',
+      '3. COOKIES',
+      'This game does not set any cookies.',
+      'Umami analytics is cookie-free by design.',
+      '',
+      '4. THIRD-PARTY SERVICES',
+      '- Firebase (Google): Leaderboard database.',
+      '  Privacy: firebase.google.com/support/privacy',
+      '- Umami: Anonymous analytics.',
+      '  Privacy: umami.is/privacy',
+      '- api.country.is: IP-to-country lookup.',
+      '',
+      '5. DATA SHARING',
+      'We do NOT sell, rent, or share personal data',
+      'with third parties for marketing purposes.',
+      'Leaderboard names and scores are publicly visible',
+      'to all players.',
+      '',
+      '6. YOUR RIGHTS (GDPR / EEA USERS)',
+      'If you are in the EU/EEA, you have the right to:',
+      '- Access your data',
+      '- Request correction or deletion',
+      '- Object to processing',
+      '- Data portability',
+      'To exercise these rights, email us. We will respond',
+      'within 30 days.',
+      '',
+      '7. YOUR RIGHTS (CCPA / CALIFORNIA USERS)',
+      'California residents may request disclosure of data',
+      'collected and request deletion. We do not sell',
+      'personal information as defined by the CCPA.',
+      '',
+      '8. CHILDREN\'S PRIVACY (COPPA)',
+      'We do not knowingly collect personal information',
+      'from children under 13. If you believe a child',
+      'has submitted data, contact us for removal.',
+      '',
+      '9. DATA SECURITY',
+      'Leaderboard data is transmitted over HTTPS.',
+      'Firebase access rules restrict write operations.',
+      'No passwords or sensitive data are collected.',
+      '',
+      '10. CHANGES TO THIS POLICY',
+      'We may update this policy at any time. The "Last',
+      'updated" date at the top will reflect changes.',
+      '',
+      '11. CONTACT',
+      'adrian.knoll [at] gmail.com',
     ];
   } else {
     lines = [
       '--- ' + t('disclaimer') + ' ---',
-      '', 'Entity: Adrian Knoll',
-      '', 'This game is for educational and entertainment',
-      'purposes only.',
-      '', 'This game is NOT affiliated with the IDF, Rafael',
-      'Advanced Defense Systems, or the Israeli government.',
-      '', 'All game imagery is an artistic representation.',
-      '', 'No political statement is intended.',
-      '', 'Iron Dome is a registered trademark of Rafael.',
+      '',
+      'Last updated: March 20, 2026',
+      '',
+      '1. NATURE OF THE GAME',
+      'This is a browser-based game created for',
+      'educational and entertainment purposes only.',
+      'It is NOT a simulation of real military systems',
+      'and does not depict actual events.',
+      '',
+      '2. NO AFFILIATION',
+      'This game is an independent fan project. It is',
+      'NOT affiliated with, endorsed by, or sponsored by:',
+      '- Rafael Advanced Defense Systems Ltd.',
+      '- The Israel Defense Forces (IDF)',
+      '- The State of Israel',
+      '- Any government or military organization',
+      '',
+      '3. TRADEMARKS',
+      '"Iron Dome" is a registered trademark of Rafael',
+      'Advanced Defense Systems Ltd. All other trademarks',
+      'are property of their respective owners. Use of',
+      'these names is for identification purposes only',
+      'and does not imply endorsement.',
+      '',
+      '4. ARTISTIC REPRESENTATION',
+      'All visuals, audio, city depictions, and game',
+      'mechanics are artistic interpretations. Building',
+      'layouts, weapon behaviors, and scenarios are',
+      'fictional and not based on classified or',
+      'restricted information.',
+      '',
+      '5. NO POLITICAL STATEMENT',
+      'This game does not represent a political position.',
+      'It is a tribute to civilian defense technology',
+      'and is intended to be respectful to all communities.',
+      '',
+      '6. HEALTH WARNING',
+      'This game contains flashing lights and rapid visual',
+      'effects that may cause discomfort or trigger seizures',
+      'in individuals with photosensitive conditions.',
+      'Play at your own discretion.',
+      '',
+      '7. ACCURACY',
+      'Game mechanics, scores, and statistics do not',
+      'reflect real-world performance of any defense',
+      'system. No accuracy claims are made.',
+      '',
+      '8. CONTACT',
+      'For any concerns, takedown requests, or questions:',
+      'adrian.knoll [at] gmail.com',
     ];
   }
 
@@ -5034,11 +5229,35 @@ function drawLegalOverlay() {
         ctx.textAlign = isRTL() ? 'right' : 'left';
         ctx.font = `${fz(12)}px Arial`;
         ctx.fillStyle = '#ccddee';
+      } else if (/^\d+\.\s/.test(line)) {
+        // Section headings
+        ctx.fillStyle = '#66bbee';
+        ctx.font = `bold ${fz(13)}px Arial`;
+        ctx.fillText(line, textX, ly);
+        ctx.fillStyle = '#ccddee';
+        ctx.font = `${fz(12)}px Arial`;
       } else {
         ctx.fillText(line, textX, ly);
       }
     }
   });
+
+  // Scroll hint — fade gradient at bottom if more content below
+  const maxScroll = Math.max(0, lines.length * lineH - (H - contentY - fz(20)));
+  if (legalScrollY < maxScroll - 10) {
+    const grad = ctx.createLinearGradient(0, H - fz(40), 0, H);
+    grad.addColorStop(0, 'rgba(0,0,10,0)');
+    grad.addColorStop(1, 'rgba(0,0,10,0.95)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, H - fz(40), W, fz(40));
+    // Arrow hint
+    ctx.fillStyle = 'rgba(150,200,255,0.4)';
+    ctx.font = `${fz(12)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText('▼ scroll for more ▼', W/2, H - fz(10));
+  }
+  // Clamp scroll max
+  if (legalScrollY > maxScroll) legalScrollY = maxScroll;
 }
 
 function drawNameInput() {
