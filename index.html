@@ -4927,22 +4927,32 @@ function drawMenu() {
     { label: t('privacy'), tab: 'privacy' },
     { label: t('disclaimer'), tab: 'disclaimer' }
   ];
-  const legalY = Math.max(curY + fz(8), H - fz(30));
-  ctx.fillStyle = 'rgba(100,130,170,0.5)';
-  ctx.font = `${fz(10)}px Arial`;
+  const lFS = fz(11);
+  ctx.font = `${lFS}px Arial`;
   ctx.textAlign = 'center';
   legalBtnRects = [];
   const legalLabels = legalLinks.map(l => l.label);
-  const legalStr = legalLabels.join('  |  ');
+  const legalStr = legalLabels.join('   |   ');
   const legalTotalW = ctx.measureText(legalStr).width;
+  // Position: use curY flow, but clamp to at most GROUND_Y - fz(8)
+  const legalY = Math.min(curY + fz(6), GROUND_Y - fz(8));
+  // Dark backdrop pill for readability over cityscape
+  const lBgW = legalTotalW + fz(24);
+  const lBgH = fz(20);
+  ctx.fillStyle = 'rgba(0,5,15,0.6)';
+  ctx.beginPath(); ctx.roundRect(W/2 - lBgW/2, legalY - lBgH*0.65, lBgW, lBgH, 8); ctx.fill();
   let legalCurX = W/2 - legalTotalW/2;
   legalLinks.forEach((link, i) => {
     const lw = ctx.measureText(link.label).width;
-    ctx.fillText(link.label, legalCurX + lw/2, legalY);
-    legalBtnRects.push({ x: legalCurX - 4, y: legalY - fz(12), w: lw + 8, h: fz(16), tab: link.tab });
+    const txX = legalCurX + lw/2;
+    ctx.fillStyle = 'rgba(160,190,240,0.85)';
+    ctx.fillText(link.label, txX, legalY);
+    ctx.fillRect(txX - lw/2, legalY + 2, lw, 1);
+    legalBtnRects.push({ x: legalCurX - 6, y: legalY - fz(14), w: lw + 12, h: fz(22), tab: link.tab });
     legalCurX += lw;
     if (i < legalLinks.length - 1) {
-      const sepW = ctx.measureText('  |  ').width;
+      const sepW = ctx.measureText('   |   ').width;
+      ctx.fillStyle = 'rgba(100,130,170,0.4)';
       ctx.fillText('|', legalCurX + sepW/2, legalY);
       legalCurX += sepW;
     }
