@@ -4682,7 +4682,8 @@ function drawWaveTransition() {
 
 function drawLangToggle(baseY) {
   const langs = [{l:'he',flag:'🇮🇱',label:'עב'},{l:'en',flag:'🇺🇸',label:'EN'},{l:'de',flag:'🇩🇪',label:'DE'}];
-  const bw = fz(52), bh = fz(42), gap = fz(8);
+  const mobLT = isMobileDevice;
+  const bw = mobLT ? 44 : fz(52), bh = mobLT ? 36 : fz(42), gap = mobLT ? 6 : fz(8);
   const totalW = langs.length * bw + (langs.length-1) * gap;
   const sx = W/2 - totalW/2;
   langBtnRects = [];
@@ -4707,13 +4708,13 @@ function drawLangToggle(baseY) {
       ctx.beginPath(); ctx.roundRect(bx, baseY, bw, bh, 10); ctx.stroke();
     }
     // Flag emoji (large)
-    ctx.font = `${fz(22)}px Arial`;
+    ctx.font = `${mobLT ? 20 : fz(22)}px Arial`;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
     ctx.fillText(lang.flag, bx + bw/2, baseY + bh*0.48);
     // Label below flag
     ctx.fillStyle = active ? '#fff' : '#8899aa';
-    ctx.font = `bold ${fz(10)}px Arial`;
+    ctx.font = `bold ${mobLT ? 9 : fz(10)}px Arial`;
     ctx.fillText(lang.label, bx + bw/2, baseY + bh*0.82);
     langBtnRects.push({x: bx, y: baseY, w: bw, h: bh, lang: lang.l});
   });
@@ -5805,15 +5806,14 @@ function drawVictory() {
 
   // Start content below language flags
   const mob = isMobileDevice;
-  const vY = mob ? fz(52) + 12 : H * 0.1;
-  const sp = mob ? 0.75 : 1; // tighter spacing on mobile
+  const vY = mob ? fz(42) + 18 : H * 0.1;
 
   // Victory title with golden glow
   ctx.save();
   ctx.shadowColor = '#ffcc00';
   ctx.shadowBlur = 30;
   ctx.fillStyle = '#ffdd00';
-  ctx.font = `bold ${fz(mob ? 28 : 36)}px Arial`;
+  ctx.font = `bold ${mob ? 36 : fz(36)}px Arial`;
   ctx.textAlign = 'center';
   const pulse = 1 + Math.sin(frame * 0.04) * 0.03;
   ctx.translate(W/2, vY);
@@ -5824,41 +5824,41 @@ function drawVictory() {
 
   // Description
   ctx.fillStyle = '#88ccff';
-  ctx.font = `${fz(mob ? 13 : 15)}px Arial`;
+  ctx.font = `${mob ? 16 : fz(15)}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText(t('victoryDesc'), W/2, vY + fz(26 * sp));
+  ctx.fillText(t('victoryDesc'), W/2, vY + (mob ? 28 : fz(30)));
 
   // Score
   ctx.fillStyle = '#fff';
-  ctx.font = `bold ${fz(mob ? 26 : 30)}px Arial`;
-  ctx.fillText(`${score}`, W/2, vY + fz(60 * sp));
+  ctx.font = `bold ${mob ? 40 : fz(30)}px Arial`;
+  ctx.fillText(`${score}`, W/2, vY + (mob ? 72 : fz(70)));
   ctx.fillStyle = 'rgba(150,180,220,0.5)';
-  ctx.font = `${fz(11)}px Arial`;
-  ctx.fillText(t('finalScore'), W/2, vY + fz(75 * sp));
+  ctx.font = `${mob ? 13 : fz(12)}px Arial`;
+  ctx.fillText(t('finalScore'), W/2, vY + (mob ? 90 : fz(88)));
 
   // Stats
   ctx.fillStyle = '#88bbff';
-  ctx.font = `${fz(mob ? 11 : 13)}px Arial`;
-  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, vY + fz(93 * sp));
+  ctx.font = `${mob ? 14 : fz(13)}px Arial`;
+  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, vY + (mob ? 112 : fz(110)));
 
   // Cities defended list
   ctx.fillStyle = 'rgba(100, 200, 255, 0.6)';
-  ctx.font = `${fz(mob ? 9 : 11)}px Arial`;
+  ctx.font = `${mob ? 12 : fz(11)}px Arial`;
   const cityNames = CITIES.map(c => c.name[currentLang] || c.name.en).join('  \u2022  ');
-  ctx.fillText(cityNames, W/2, vY + fz(110 * sp));
+  ctx.fillText(cityNames, W/2, vY + (mob ? 130 : fz(132)));
 
   // Rating
   const ratings = t('rating');
   ctx.fillStyle = '#ffdd00';
-  ctx.font = `bold ${fz(mob ? 15 : 18)}px Arial`;
-  ctx.fillText(ratings[5], W/2, vY + fz(132 * sp));
+  ctx.font = `bold ${mob ? 22 : fz(18)}px Arial`;
+  ctx.fillText(ratings[5], W/2, vY + (mob ? 158 : fz(160)));
 
   // Buttons side by side
-  const gap = fz(10);
-  const playW = fz(mob ? 140 : 160), playH = fz(mob ? 36 : 42);
-  const lbW2 = fz(mob ? 48 : 55), lbH2 = fz(mob ? 36 : 42);
+  const gap = mob ? 8 : fz(10);
+  const playW = mob ? 160 : fz(160), playH = mob ? 40 : fz(42);
+  const lbW2 = mob ? 50 : fz(55), lbH2 = mob ? 40 : fz(42);
   const totalBtnW = playW + gap + lbW2;
-  const btnY = vY + fz(145 * sp);
+  const btnY = vY + (mob ? 175 : fz(178));
   const startX = W/2 - totalBtnW / 2;
 
   // Play again with glow
@@ -5877,7 +5877,7 @@ function drawVictory() {
   ctx.fillStyle = 'rgba(255,255,255,0.08)';
   ctx.beginPath(); ctx.roundRect(startX + 2, btnY + 1, playW - 4, playH*0.4, [10,10,0,0]); ctx.fill();
   ctx.fillStyle = '#fff';
-  ctx.font = `bold ${fz(17)}px Arial`;
+  ctx.font = `bold ${mob ? 17 : fz(17)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(t('playAgain'), startX + playW / 2, btnY + playH * 0.63);
 
@@ -5895,13 +5895,13 @@ function drawVictory() {
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 12); ctx.stroke();
   ctx.fillStyle = '#6aacee';
-  ctx.font = `bold ${fz(18)}px Arial`;
+  ctx.font = `bold ${mob ? 18 : fz(18)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText('\u{1F3C6}', lbX + lbW2 / 2, btnY + lbH2 * 0.63);
 
   // Share buttons (M8 — share prompt after victory)
   if (!isEmbedMode) {
-    drawShareButtons(btnY + playH + fz(18), endShareBtnRects);
+    drawShareButtons(btnY + playH + (mob ? 18 : fz(18)), endShareBtnRects);
   }
 }
 
@@ -5937,14 +5937,13 @@ function drawGameOver() {
   }
 
   const mobGO = isMobileDevice;
-  const goY = mobGO ? fz(52) + 12 : H * 0.12;
-  const spGO = mobGO ? 0.78 : 1;
+  const goY = mobGO ? fz(42) + 18 : H * 0.12;
 
   ctx.save();
   ctx.shadowColor = 'rgba(255,50,50,0.6)';
   ctx.shadowBlur = 15;
   ctx.fillStyle = '#ff4444';
-  ctx.font = `bold ${fz(mobGO ? 28 : 34)}px Arial`;
+  ctx.font = `bold ${mobGO ? 34 : fz(34)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(t('gameOver'), W/2, goY);
   ctx.shadowBlur = 0;
@@ -5955,9 +5954,9 @@ function drawGameOver() {
   ctx.shadowColor = 'rgba(255,255,255,0.4)';
   ctx.shadowBlur = 8;
   ctx.fillStyle = '#fff';
-  ctx.font = `bold ${fz(mobGO ? 26 : 30)}px Arial`;
+  ctx.font = `bold ${mobGO ? 38 : fz(30)}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText(`${score}`, W/2, goY + fz(38 * spGO));
+  ctx.fillText(`${score}`, W/2, goY + (mobGO ? 42 : fz(42)));
   ctx.shadowBlur = 0;
   ctx.restore();
   if (score >= highScore && score > 0) {
@@ -5965,22 +5964,22 @@ function drawGameOver() {
     ctx.shadowColor = 'rgba(255,220,50,0.5)';
     ctx.shadowBlur = 8;
     ctx.fillStyle = '#ffdd00';
-    ctx.font = `bold ${fz(mobGO ? 12 : 14)}px Arial`;
+    ctx.font = `bold ${mobGO ? 14 : fz(14)}px Arial`;
     ctx.textAlign = 'center';
-    ctx.fillText(t('newRecord'), W/2, goY + fz(55 * spGO));
+    ctx.fillText(t('newRecord'), W/2, goY + (mobGO ? 60 : fz(62)));
     ctx.shadowBlur = 0;
     ctx.restore();
   } else {
     ctx.fillStyle = '#888';
-    ctx.font = `${fz(11)}px Arial`;
+    ctx.font = `${mobGO ? 13 : fz(12)}px Arial`;
     ctx.textAlign = 'center';
-    ctx.fillText(`${t('best')}: ${highScore}`, W/2, goY + fz(55 * spGO));
+    ctx.fillText(`${t('best')}: ${highScore}`, W/2, goY + (mobGO ? 60 : fz(62)));
   }
 
   // Wave + combo
   ctx.fillStyle = '#88bbff';
-  ctx.font = `${fz(mobGO ? 11 : 13)}px Arial`;
-  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, goY + fz(73 * spGO));
+  ctx.font = `${mobGO ? 14 : fz(13)}px Arial`;
+  ctx.fillText(`${t('waveLabel')}: ${wave}  |  ${t('comboMax')}: ${maxCombo}`, W/2, goY + (mobGO ? 82 : fz(84)));
 
   // City destroyed message
   const destroyedCity = CITIES[currentCityIdx] ? (CITIES[currentCityIdx].name[currentLang] || CITIES[currentCityIdx].name.en) : '';
@@ -5988,12 +5987,8 @@ function drawGameOver() {
   ctx.shadowColor = 'rgba(255,50,50,0.4)';
   ctx.shadowBlur = 8;
   ctx.fillStyle = '#ff6666';
-  ctx.font = `bold ${fz(mobGO ? 12 : 14)}px Arial`;
-  if (currentLang === 'he') {
-    ctx.fillText(`${destroyedCity} ${t('cityDestroyed')}`, W/2, goY + fz(88 * spGO));
-  } else {
-    ctx.fillText(`${destroyedCity} ${t('cityDestroyed')}`, W/2, goY + fz(88 * spGO));
-  }
+  ctx.font = `bold ${mobGO ? 15 : fz(14)}px Arial`;
+  ctx.fillText(`${destroyedCity} ${t('cityDestroyed')}`, W/2, goY + (mobGO ? 102 : fz(100)));
   ctx.shadowBlur = 0;
   ctx.restore();
 
@@ -6007,15 +6002,15 @@ function drawGameOver() {
   else if (score >= 20) ri = 2;
   else if (score >= 5) ri = 1;
   ctx.fillStyle = rColors[ri];
-  ctx.font = `bold ${fz(mobGO ? 15 : 18)}px Arial`;
-  ctx.fillText(ratings[ri], W/2, goY + fz(108 * spGO));
+  ctx.font = `bold ${mobGO ? 20 : fz(18)}px Arial`;
+  ctx.fillText(ratings[ri], W/2, goY + (mobGO ? 130 : fz(126)));
 
   // Buttons side by side
-  const gap = fz(10);
-  const playW = fz(mobGO ? 140 : 160), playH = fz(mobGO ? 36 : 42);
-  const lbW2 = fz(mobGO ? 48 : 55), lbH2 = fz(mobGO ? 36 : 42);
+  const gap = mobGO ? 8 : fz(10);
+  const playW = mobGO ? 160 : fz(160), playH = mobGO ? 40 : fz(42);
+  const lbW2 = mobGO ? 50 : fz(55), lbH2 = mobGO ? 40 : fz(42);
   const totalBtnW = playW + gap + lbW2;
-  const btnY = goY + fz(120 * spGO);
+  const btnY = goY + (mobGO ? 148 : fz(141));
   const startX = W/2 - totalBtnW/2;
 
   // Play again with glow
@@ -6035,7 +6030,7 @@ function drawGameOver() {
   ctx.fillStyle = 'rgba(255,255,255,0.08)';
   ctx.beginPath(); ctx.roundRect(startX + 2, btnY + 1, playW - 4, playH*0.4, [10,10,0,0]); ctx.fill();
   ctx.fillStyle = '#fff';
-  ctx.font = `bold ${fz(17)}px Arial`;
+  ctx.font = `bold ${mobGO ? 17 : fz(17)}px Arial`;
   ctx.fillText(t('playAgain'), startX + playW/2, btnY + playH*0.63);
 
   // Leaderboard button with glow
@@ -6052,12 +6047,12 @@ function drawGameOver() {
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.roundRect(lbX, btnY, lbW2, lbH2, 12); ctx.stroke();
   ctx.fillStyle = '#6aacee';
-  ctx.font = `bold ${fz(18)}px Arial`;
+  ctx.font = `bold ${mobGO ? 18 : fz(18)}px Arial`;
   ctx.fillText(`\u{1F3C6}`, lbX + lbW2/2, btnY + lbH2*0.63);
 
   // Share buttons (M7 — share prompt after game over)
   if (!isEmbedMode) {
-    drawShareButtons(btnY + playH + fz(18), endShareBtnRects);
+    drawShareButtons(btnY + playH + (mobGO ? 18 : fz(18)), endShareBtnRects);
   }
 }
 
