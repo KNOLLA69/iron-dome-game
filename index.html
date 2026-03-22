@@ -119,7 +119,9 @@ const TEXTS = {
     rating: ['נסה שוב...', 'טירון', 'מגן טוב', 'מיירט מצטיין', 'מפקד סוללה', 'אלוף כיפת ברזל!'],
     waveLabel: 'גל', comboMax: 'קומבו מקסימלי',
     batteryLabel: 'כיפת ברזל',
-    leaderboard: 'טבלת מובילים', enterName: 'הכנס שם (עד 6 תווים)', submit: 'שלח',
+    leaderboard: 'טבלת מובילים', weeklyLB: 'השבוע', allTimeLB: 'כל הזמנים',
+    weeklyReset: 'מתאפס כל יום ראשון בחצות', allTimeChamp: 'אלוף כל הזמנים', weeklyChamp: 'אלוף השבוע',
+    enterName: 'הכנס שם (עד 6 תווים)', submit: 'שלח',
     noAmmo: 'אין מיירטים!', outOfAmmo: 'נגמרו המיירטים',
     paused: 'השהייה', resume: 'המשך משחק',
     cityDefend: 'מגנים על', victory: 'ניצחון מוחלט!', victoryDesc: 'הגנת על כל ערי ישראל!',
@@ -156,7 +158,9 @@ const TEXTS = {
     rating: ['Try again...', 'Rookie', 'Good defender', 'Top interceptor', 'Battery commander', 'Iron Dome champion!'],
     waveLabel: 'Wave', comboMax: 'Max combo',
     batteryLabel: 'IRON DOME',
-    leaderboard: 'LEADERBOARD', enterName: 'Enter name (max 6 chars)', submit: 'Submit',
+    leaderboard: 'LEADERBOARD', weeklyLB: 'This Week', allTimeLB: 'All Time',
+    weeklyReset: 'Resets Sunday midnight', allTimeChamp: 'All-Time Champion', weeklyChamp: 'Weekly Champion',
+    enterName: 'Enter name (max 6 chars)', submit: 'Submit',
     noAmmo: 'No ammo!', outOfAmmo: 'Out of interceptors',
     paused: 'Paused', resume: 'Resume',
     cityDefend: 'Defending', victory: 'Total Victory!', victoryDesc: 'You defended all cities of Israel!',
@@ -193,7 +197,9 @@ const TEXTS = {
     rating: ['Nochmal...', 'Anfänger', 'Guter Verteidiger', 'Top-Abfänger', 'Batterie-Kommandant', 'Iron Dome Champion!'],
     waveLabel: 'Welle', comboMax: 'Max Kombo',
     batteryLabel: 'IRON DOME',
-    leaderboard: 'BESTENLISTE', enterName: 'Name eingeben (max 6)', submit: 'Senden',
+    leaderboard: 'BESTENLISTE', weeklyLB: 'Diese Woche', allTimeLB: 'Alle Zeiten',
+    weeklyReset: 'Reset Sonntag Mitternacht', allTimeChamp: 'Allzeit-Champion', weeklyChamp: 'Wochen-Champion',
+    enterName: 'Name eingeben (max 6)', submit: 'Senden',
     noAmmo: 'Keine Munition!', outOfAmmo: 'Abfangjäger leer',
     paused: 'Pause', resume: 'Weiter',
     cityDefend: 'Verteidigung von', victory: 'Totaler Sieg!', victoryDesc: 'Du hast alle Städte Israels verteidigt!',
@@ -505,6 +511,95 @@ async function submitScore(name, sc, wv) {
   } catch (e) {}
 }
 fetchLeaderboard();
+
+// ==================== WEEKLY LEADERBOARD ====================
+let weeklyLeaderboardData = [];
+let weeklyLeaderboardLoading = false;
+let leaderboardTab = 'weekly'; // 'alltime' or 'weekly' — default to weekly
+
+async function fetchWeeklyLeaderboard() {
+  weeklyLeaderboardLoading = true;
+  try {
+    // Check if weekly reset is needed (Sunday 23:59 Israel time)
+    await checkWeeklyReset();
+    const res = await fetch(`${FIREBASE_URL}/weeklyLeaderboard.json`);
+    if (!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+    if (data) {
+      const entries = Object.entries(data).map(([k, v]) => ({ ...v, _key: k }));
+      entries.sort((a, b) => b.score - a.score);
+      weeklyLeaderboardData = entries.slice(0, 10);
+    } else {
+      weeklyLeaderboardData = [];
+    }
+  } catch (e) { weeklyLeaderboardData = []; }
+  weeklyLeaderboardLoading = false;
+}
+
+function qualifiesForWeekly(s) {
+  if (s <= 0) return false;
+  if (weeklyLeaderboardData.length < 10) return true;
+  return s > weeklyLeaderboardData[weeklyLeaderboardData.length - 1].score;
+}
+
+async function submitWeeklyScore(name, sc, wv) {
+  try {
+    await fetch(`${FIREBASE_URL}/weeklyLeaderboard.json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.toUpperCase().slice(0, 6), score: sc, wave: wv, country: playerCountry, date: Date.now() })
+    });
+    const res = await fetch(`${FIREBASE_URL}/weeklyLeaderboard.json`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data) {
+        const entries = Object.entries(data).map(([k, v]) => ({ ...v, _key: k }));
+        entries.sort((a, b) => b.score - a.score);
+        const toDelete = entries.slice(10);
+        for (const e of toDelete) {
+          await fetch(`${FIREBASE_URL}/weeklyLeaderboard/${e._key}.json`, { method: 'DELETE' });
+        }
+        weeklyLeaderboardData = entries.slice(0, 10);
+      }
+    }
+  } catch (e) {}
+}
+
+// Weekly reset: Sunday 23:59 Israel time (Asia/Jerusalem)
+async function checkWeeklyReset() {
+  try {
+    const res = await fetch(`${FIREBASE_URL}/weeklyReset.json`);
+    const lastReset = res.ok ? await res.json() : 0;
+    const now = new Date();
+    // Get current time in Israel
+    const israelTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+    // Find last Sunday 23:59 Israel time
+    const dayOfWeek = israelTime.getDay(); // 0=Sunday
+    const msSinceLastSunday = dayOfWeek === 0
+      ? 0 // it's Sunday — check if past 23:59
+      : dayOfWeek * 86400000;
+    const lastSunday = new Date(israelTime);
+    lastSunday.setDate(israelTime.getDate() - dayOfWeek);
+    lastSunday.setHours(23, 59, 0, 0);
+    // If it's Sunday but before 23:59, use previous Sunday
+    if (dayOfWeek === 0 && israelTime.getHours() < 23 || (dayOfWeek === 0 && israelTime.getHours() === 23 && israelTime.getMinutes() < 59)) {
+      lastSunday.setDate(lastSunday.getDate() - 7);
+    }
+    const resetTimestamp = lastSunday.getTime();
+    if (!lastReset || lastReset < resetTimestamp) {
+      // Reset weekly leaderboard
+      await fetch(`${FIREBASE_URL}/weeklyLeaderboard.json`, { method: 'DELETE' });
+      await fetch(`${FIREBASE_URL}/weeklyReset.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Date.now())
+      });
+      weeklyLeaderboardData = [];
+    }
+  } catch (e) {}
+}
+
+fetchWeeklyLeaderboard();
 
 // Play counter - Firebase
 async function fetchPlayCount() {
@@ -915,6 +1010,7 @@ const GROUND_Y = H - 55;
 const SEA_Y = GROUND_Y + 5;
 const batteryX = W / 2;
 const batteryY = GROUND_Y - 15;
+const PANEL_W = isMobileDevice ? 0 : 140; // War Room side panels (desktop only)
 
 // ==================== LAUNCHER & DEFENSE SYSTEM CONSTANTS ====================
 const LAUNCHER_POD_SIZE = 20;
@@ -1909,6 +2005,7 @@ let endShareBtnRects = []; // [{x,y,w,h,type}] for victory/gameover screens
 let legalBtnRects = []; // [{x,y,w,h,tab}]
 let legalCloseBtnRect = { x: 0, y: 0, w: 0, h: 0 };
 let legalTabBtnRects = []; // [{x,y,w,h,tab}]
+let lbTabBtnRects = []; // [{x,y,w,h,tab:'alltime'|'weekly'}]
 let langBtnRects = []; // [{x,y,w,h,lang}]
 let hoveredBtn = null; // tracks which button the mouse is over
 // Name input for leaderboard
@@ -2278,6 +2375,17 @@ function handleClick() {
       if (isInBtn(mouseX, mouseY, lb)) { setLang(lb.lang); return; }
     }
   }
+  // Leaderboard tab clicks (any screen where leaderboard is showing)
+  if (showLeaderboard) {
+    for (const tb of lbTabBtnRects) {
+      if (isInBtn(mouseX, mouseY, tb)) {
+        leaderboardTab = tb.tab;
+        if (tb.tab === 'weekly') fetchWeeklyLeaderboard();
+        else fetchLeaderboard();
+        return;
+      }
+    }
+  }
   if (state === 'menu') {
     if (showLeaderboard) { showLeaderboard = false; return; }
     // Legal overlay interactions
@@ -2289,7 +2397,7 @@ function handleClick() {
       return;
     }
     if (isInBtn(mouseX, mouseY, startBtnRect)) { startGame(); return; }
-    if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = true; fetchLeaderboard(); return; }
+    if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = true; fetchLeaderboard(); fetchWeeklyLeaderboard(); return; }
     if (isInBtn(mouseX, mouseY, contactBtnRect)) {
       window.open('mailto:adrian@tulu.co.il?subject=Iron Dome Game', '_blank'); return;
     }
@@ -2309,6 +2417,7 @@ function handleClick() {
   if (state === 'nameinput') {
     if (isInBtn(mouseX, mouseY, submitBtnRect) && nameInput.length > 0) {
       submitScore(nameInput, score, wave);
+      submitWeeklyScore(nameInput, score, wave);
       state = 'gameover'; nameInputActive = false; showLeaderboard = true;
       return;
     }
@@ -2346,7 +2455,7 @@ function handleClick() {
   }
   if (state === 'victory') {
     if (isInBtn(mouseX, mouseY, playAgainBtnRect)) { showLeaderboard = false; startGame(); return; }
-    if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = !showLeaderboard; if (showLeaderboard) fetchLeaderboard(); return; }
+    if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = !showLeaderboard; if (showLeaderboard) { fetchLeaderboard(); fetchWeeklyLeaderboard(); } return; }
     for (const sb of endShareBtnRects) {
       if (isInBtn(mouseX, mouseY, sb)) { openShare(sb.type, getShareText(true), GAME_URL); return; }
     }
@@ -2354,7 +2463,7 @@ function handleClick() {
   }
   if (state === 'gameover') {
     if (isInBtn(mouseX, mouseY, playAgainBtnRect)) { showLeaderboard = false; startGame(); return; }
-    if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = !showLeaderboard; if (showLeaderboard) fetchLeaderboard(); return; }
+    if (isInBtn(mouseX, mouseY, lbBtnRect)) { showLeaderboard = !showLeaderboard; if (showLeaderboard) { fetchLeaderboard(); fetchWeeklyLeaderboard(); } return; }
     for (const sb of endShareBtnRects) {
       if (isInBtn(mouseX, mouseY, sb)) { openShare(sb.type, getShareText(false), GAME_URL); return; }
     }
@@ -2386,6 +2495,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Backspace') { nameInput = nameInput.slice(0, -1); e.preventDefault(); }
     else if (e.key === 'Enter' && nameInput.length > 0) {
       submitScore(nameInput, score, wave);
+      submitWeeklyScore(nameInput, score, wave);
       state = 'gameover'; nameInputActive = false; showLeaderboard = true;
     }
     else if (e.key.length === 1 && nameInput.length < 6) {
@@ -2528,8 +2638,8 @@ function startWave() {
     state = 'victory';
     if (typeof umami !== 'undefined') umami.track('game-end', { score, wave, result: 'victory' });
     playSound('hatikvah');
-    fetchLeaderboard().then(() => {
-      if (qualifiesForLeaderboard(score)) {
+    Promise.all([fetchLeaderboard(), fetchWeeklyLeaderboard()]).then(() => {
+      if (qualifiesForLeaderboard(score) || qualifiesForWeekly(score)) {
         nameInputActive = true;
         state = 'nameinput';
       }
@@ -2932,8 +3042,8 @@ function update() {
         showLeaderboard = false;
         state = 'gameover';
         if (typeof umami !== 'undefined') umami.track('game-end', { score, wave, result: 'gameover' });
-        fetchLeaderboard().then(() => {
-          if (qualifiesForLeaderboard(score)) {
+        Promise.all([fetchLeaderboard(), fetchWeeklyLeaderboard()]).then(() => {
+          if (qualifiesForLeaderboard(score) || qualifiesForWeekly(score)) {
             nameInputActive = true;
             state = 'nameinput';
           }
@@ -4825,32 +4935,80 @@ function drawLangToggle(baseY) {
 
 function drawLeaderboardTable(baseY) {
   const mobLB = isMobileDevice;
-  const titleSz = mobLB ? 24 : fz(24);
+  const tabSz = mobLB ? 13 : fz(13);
+  const titleSz = mobLB ? 22 : fz(22);
   const entrySz = mobLB ? 18 : fz(17);
   const topSz = mobLB ? 20 : fz(19);
   const waveSz = mobLB ? 12 : fz(12);
   const rowH = mobLB ? 32 : fz(30);
 
+  // ===== TAB BUTTONS =====
+  const tabLabels = [
+    { id: 'alltime', label: `🏆 ${t('allTimeLB')}` },
+    { id: 'weekly', label: `📅 ${t('weeklyLB')}` }
+  ];
+  ctx.font = `bold ${tabSz}px Arial`;
+  const tabPad = mobLB ? 14 : fz(16);
+  const tabH = mobLB ? 28 : fz(28);
+  const tabWidths = tabLabels.map(tl => ctx.measureText(tl.label).width + tabPad * 2);
+  const tabGap = mobLB ? 6 : fz(6);
+  const tabTotalW = tabWidths.reduce((a, b) => a + b, 0) + tabGap;
+  let tabX = W/2 - tabTotalW/2;
+  const tabY = baseY;
+  lbTabBtnRects = [];
+  tabLabels.forEach((tl, i) => {
+    const tw = tabWidths[i];
+    const active = leaderboardTab === tl.id;
+    ctx.fillStyle = active ? 'rgba(0,150,200,0.4)' : 'rgba(40,50,70,0.5)';
+    ctx.beginPath(); ctx.roundRect(tabX, tabY, tw, tabH, 8); ctx.fill();
+    if (active) {
+      ctx.strokeStyle = '#00aadd'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect(tabX, tabY, tw, tabH, 8); ctx.stroke();
+    }
+    ctx.fillStyle = active ? '#fff' : '#8899aa';
+    ctx.font = `bold ${tabSz}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText(tl.label, tabX + tw/2, tabY + tabH * 0.68);
+    lbTabBtnRects.push({ x: tabX, y: tabY, w: tw, h: tabH, tab: tl.id });
+    tabX += tw + tabGap;
+  });
+
+  // ===== TITLE =====
+  const contentY = tabY + tabH + (mobLB ? 12 : fz(12));
+  const isWeekly = leaderboardTab === 'weekly';
+  const data = isWeekly ? weeklyLeaderboardData : leaderboardData;
+  const loading = isWeekly ? weeklyLeaderboardLoading : leaderboardLoading;
+
   ctx.fillStyle = '#6aacee';
   ctx.font = `bold ${titleSz}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText(t('leaderboard'), W/2, baseY);
-  if (leaderboardLoading) {
+  ctx.fillText(isWeekly ? t('weeklyLB') : t('leaderboard'), W/2, contentY);
+
+  // Weekly subtitle
+  if (isWeekly) {
+    ctx.fillStyle = 'rgba(150,180,220,0.5)';
+    ctx.font = `${mobLB ? 11 : fz(11)}px Arial`;
+    ctx.fillText(`${t('weeklyReset')} 🇮🇱`, W/2, contentY + (mobLB ? 16 : fz(16)));
+  }
+
+  const tableStartY = contentY + (isWeekly ? (mobLB ? 24 : fz(24)) : (mobLB ? 8 : fz(8)));
+
+  if (loading) {
     ctx.fillStyle = '#888';
     ctx.font = `${entrySz}px Arial`;
-    ctx.fillText('...', W/2, baseY + rowH);
+    ctx.fillText('...', W/2, tableStartY + rowH);
     return;
   }
-  if (leaderboardData.length === 0) {
+  if (data.length === 0) {
     ctx.fillStyle = '#666';
     ctx.font = `${entrySz}px Arial`;
-    ctx.fillText('-', W/2, baseY + rowH);
+    ctx.fillText(isWeekly ? '—' : '-', W/2, tableStartY + rowH);
     return;
   }
   const colW = mobLB ? Math.min(W - 30, 460) : Math.min(W * 0.7, fz(500));
   const lx = W/2 - colW/2;
-  leaderboardData.forEach((entry, i) => {
-    const ey = baseY + rowH * 1.2 + i * rowH;
+  data.forEach((entry, i) => {
+    const ey = tableStartY + rowH * 1.2 + i * rowH;
     const isTop = i < 3;
     ctx.fillStyle = isTop ? ['#ffdd00','#cccccc','#cc8844'][i] : 'rgba(180,200,220,0.5)';
     ctx.font = isTop ? `bold ${topSz}px Arial` : `${entrySz}px Arial`;
@@ -4923,8 +5081,8 @@ function drawMenu() {
   // Vertically center menu content
   const btnGapM = mobM ? 10 : fz(10);
   const totalMenuH = mobM
-    ? (38 + 20 + 36 + (highScore > 0 ? 18 : 0) + 10 + bigBtnH*3 + btnGapM*2 + 16 + 26 + 14 + 14 + 36 + 12 + 26)
-    : (fz(38) + fz(22) + fz(42) + (highScore > 0 ? fz(18) : 0) + fz(6) + bigBtnH*3 + fz(10)*2 + fz(18) + fz(28) + fz(14) + fz(14) + fz(40) + fz(12) + fz(30));
+    ? (38 + 20 + 42 + 12 + bigBtnH*3 + btnGapM*2 + 16 + 26 + 14 + 14 + 36 + 12 + 26)
+    : (fz(38) + fz(22) + fz(44) + fz(10) + bigBtnH*3 + fz(10)*2 + fz(18) + fz(28) + fz(14) + fz(14) + fz(40) + fz(12) + fz(30));
   // Flags end at 10+36=46 on mobile. Need title below with gap.
   const langToggleBottom = mobM ? (10 + 36 + 24 + 38) : (fz(10) + fz(42) + fz(8) + fz(38));
   // Center content vertically, but clamp so it stays below flags
@@ -4947,21 +5105,44 @@ function drawMenu() {
   ctx.fillText(t('subtitle'), W/2, titleY + (mobM ? 22 : fz(22)));
   curY = titleY + (mobM ? 40 : fz(42));
 
-  // Leaderboard #1 or local high score
-  if (leaderboardData.length > 0) {
-    const leader = leaderboardData[0];
-    const flag = countryFlag(leader.country);
-    ctx.fillStyle = '#ffdd00';
-    ctx.font = `bold ${mobM ? 14 : fz(12)}px Arial`;
-    ctx.fillText(`🏆 ${leader.name} — ${leader.score} ${flag}`, W/2, curY);
-    curY += mobM ? 20 : fz(18);
-  } else if (highScore > 0) {
-    ctx.fillStyle = '#ffdd00';
-    ctx.font = `${mobM ? 14 : fz(12)}px Arial`;
-    ctx.fillText(`${t('best')}: ${highScore}`, W/2, curY);
-    curY += mobM ? 20 : fz(18);
-  }
-  curY += mobM ? 12 : fz(6);
+  // Champion badges — All-Time + Weekly side by side
+  const badgeGap = mobM ? 8 : fz(10);
+  const badgeW = mobM ? Math.min((W - badgeGap * 3) / 2, 180) : fz(160);
+  const badgeH = mobM ? 42 : fz(44);
+  const badgeStartX = W/2 - (badgeW * 2 + badgeGap) / 2;
+  const badges = [
+    { data: leaderboardData, label: t('allTimeChamp'), color: '#ffdd00', icon: '🏆' },
+    { data: weeklyLeaderboardData, label: t('weeklyChamp'), color: '#00ccff', icon: '📅' }
+  ];
+  badges.forEach((b, i) => {
+    const bx2 = badgeStartX + i * (badgeW + badgeGap);
+    ctx.fillStyle = 'rgba(20,35,60,0.6)';
+    ctx.beginPath(); ctx.roundRect(bx2, curY, badgeW, badgeH, 10); ctx.fill();
+    ctx.strokeStyle = 'rgba(100,140,180,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(bx2, curY, badgeW, badgeH, 10); ctx.stroke();
+    // Label
+    ctx.fillStyle = 'rgba(150,180,220,0.5)';
+    ctx.font = `${mobM ? 9 : fz(9)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`${b.icon} ${b.label}`, bx2 + badgeW/2, curY + (mobM ? 13 : fz(14)));
+    // Champion name + score
+    if (b.data.length > 0) {
+      const champ = b.data[0];
+      const flag = countryFlag(champ.country);
+      ctx.fillStyle = b.color;
+      ctx.font = `bold ${mobM ? 12 : fz(11)}px Arial`;
+      ctx.fillText(`${champ.name} ${flag}`, bx2 + badgeW/2, curY + (mobM ? 27 : fz(28)));
+      ctx.fillStyle = 'rgba(200,200,220,0.6)';
+      ctx.font = `${mobM ? 10 : fz(10)}px Arial`;
+      ctx.fillText(`${champ.score}`, bx2 + badgeW/2, curY + (mobM ? 38 : fz(39)));
+    } else {
+      ctx.fillStyle = '#666';
+      ctx.font = `${mobM ? 10 : fz(10)}px Arial`;
+      ctx.fillText('—', bx2 + badgeW/2, curY + (mobM ? 30 : fz(30)));
+    }
+  });
+  curY += badgeH + (mobM ? 12 : fz(10));
 
   // ===== BIG BUTTONS =====
   const bx = W/2 - bigBtnW/2;
