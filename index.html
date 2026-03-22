@@ -2837,7 +2837,7 @@ function update() {
     const m = missiles[i];
     if (m.flashTimer > 0) m.flashTimer--;
     m.trail.push({x:m.x, y:m.y});
-    if (m.trail.length > (m.type === 'ballistic' ? 30 : m.type === 'decoy' ? 8 : 20)) m.trail.shift();
+    if (m.trail.length > (m.type === 'ballistic' ? 18 : m.type === 'decoy' ? 6 : 12)) m.trail.shift();
     m.x += m.vx; m.y += m.vy;
     // Drone wobble - sine wave horizontal movement
     if (m.type === 'drone') {
@@ -2926,7 +2926,9 @@ function update() {
       });
     }
 
-    // Proximity homing - find nearest missile in ±30° cone within 60px
+    // Proximity homing - find nearest missile in ±30° cone (throttled to every 3rd frame for perf)
+    if (frame % 3 !== ic.age % 3) { /* skip homing scan this frame */ }
+    else {
     const icHeading = Math.atan2(ic.vy, ic.vx);
     let closestInCone = null, closestDist = getComboBuffs().homingRange;
     for (let j = 0; j < missiles.length; j++) {
@@ -2955,6 +2957,7 @@ function update() {
       ic.vx = Math.cos(newAngle) * spd;
       ic.vy = Math.sin(newAngle) * spd;
     }
+    } // end homing throttle
 
     const dT = Math.sqrt((ic.x-ic.targetX)**2 + (ic.y-ic.targetY)**2);
     if (dT < 15 || ic.x < -10 || ic.x > W+10 || ic.y < -10) {
@@ -3023,6 +3026,11 @@ function update() {
   }
 
   // Explosions
+  // Performance caps — cull oldest when over limit (DECISION-041)
+  while (particles.length > 200) particles.shift();
+  while (smokeTrails.length > 80) smokeTrails.shift();
+  while (explosions.length > 15) explosions.shift();
+
   for (let i = explosions.length-1; i >= 0; i--) {
     const e = explosions[i];
     // Delayed secondary fireballs
