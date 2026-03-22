@@ -134,7 +134,10 @@ const TEXTS = {
     droneAlert: 'מל"ט!', ballisticAlert: 'טיל בליסטי!',
     rocketAlert: 'רקטה!', decoyAlert: 'נורית הטעיה!',
     cityDestroyed: 'נחרבה',
-    powerShield: 'מגן!', powerRapid: 'אש מהירה!', powerEMP: 'EMP!'
+    reloading: 'טוען מחדש...', ironBeam: 'מגן אור', davidsSling: 'קלע דוד',
+    tokenEarned: '+1 אסימון!', tokenBankFull: 'מאגר מלא!', noTokens: 'אין אסימונים!',
+    systemActive: 'מערכת פעילה!', noTargets: 'אין מטרות!', belowCutoff: 'נמוך מדי!',
+    pressForBeam: '1: מגן אור', pressForSling: '2: קלע דוד'
   },
   en: {
     title: 'IRON DOME', subtitle: 'Defend Israel',
@@ -168,7 +171,10 @@ const TEXTS = {
     droneAlert: 'UAV!', ballisticAlert: 'Ballistic!',
     rocketAlert: 'Rocket!', decoyAlert: 'Decoy Flare!',
     cityDestroyed: 'was destroyed',
-    powerShield: 'Shield!', powerRapid: 'Rapid Fire!', powerEMP: 'EMP!'
+    reloading: 'Reloading...', ironBeam: 'Iron Beam', davidsSling: "David's Sling",
+    tokenEarned: '+1 Token!', tokenBankFull: 'Bank full!', noTokens: 'No tokens!',
+    systemActive: 'System active!', noTargets: 'No valid targets!', belowCutoff: 'Too low!',
+    pressForBeam: '1: Iron Beam', pressForSling: "2: David's Sling"
   },
   de: {
     title: 'IRON DOME', subtitle: 'Israel verteidigen',
@@ -202,7 +208,10 @@ const TEXTS = {
     droneAlert: 'Drohne!', ballisticAlert: 'Ballistisch!',
     rocketAlert: 'Rakete!', decoyAlert: 'Täuschkörper!',
     cityDestroyed: 'wurde zerstört',
-    powerShield: 'Schild!', powerRapid: 'Schnellfeuer!', powerEMP: 'EMP!'
+    reloading: 'Nachladen...', ironBeam: 'Eisenstrahl', davidsSling: 'Davids Schleuder',
+    tokenEarned: '+1 Token!', tokenBankFull: 'Bank voll!', noTokens: 'Keine Token!',
+    systemActive: 'System aktiv!', noTargets: 'Keine Ziele!', belowCutoff: 'Zu tief!',
+    pressForBeam: '1: Eisenstrahl', pressForSling: '2: Davids Schleuder'
   }
 };
 let currentLang = localStorage.getItem('ironDomeLang') || 'he';
@@ -906,6 +915,22 @@ const GROUND_Y = H - 55;
 const SEA_Y = GROUND_Y + 5;
 const batteryX = W / 2;
 const batteryY = GROUND_Y - 15;
+
+// ==================== LAUNCHER & DEFENSE SYSTEM CONSTANTS ====================
+const LAUNCHER_POD_SIZE = 20;
+const RELOAD_TIMES = [180, 210, 240, 300, 360]; // frames per city (3s / 3.5s / 4s / 5s / 6s)
+const ALTITUDE_CUTOFFS = {
+  rocket:    GROUND_Y - 120,
+  drone:     GROUND_Y - 180,
+  ballistic: GROUND_Y - 70,
+  decoy:     GROUND_Y - 50
+};
+const IRON_BEAM_MAX_KILLS = 4;
+const IRON_BEAM_KILL_INTERVAL = 60;   // ~1s per target
+const DAVIDS_SLING_MAX_KILLS = 2;
+const DAVIDS_SLING_KILL_INTERVAL = 45; // ~0.75s per target
+const TOKEN_BANK_MAX = 3;
+const CONSECUTIVE_HITS_FOR_TOKEN = 5;
 
 // ==================== PRERENDER TEL AVIV SKYLINE ====================
 const cityCanvas = document.createElement('canvas');
@@ -1845,17 +1870,23 @@ let shakeX = 0, shakeY = 0, shakeDuration = 0;
 let combo = 0, comboTimer = 0, maxCombo = 0;
 let highScore = parseInt(localStorage.getItem('ironDomeHS2') || '0');
 let screenFlash = 0;
-// Power-ups, kill feed, city endurance
-let powerUps = []; // floating power-up items
-let activePower = null; // 'shield', 'rapid', 'emp'
-let activePowerTimer = 0;
+// Launcher reload system
+let launcherReloading = false, launcherReloadTimer = 0, launcherReloadDuration = 0;
+// Defense token bank (Iron Beam / David's Sling)
+let tokenBank = 0, consecutiveHits = 0;
+let activeDefenseSystem = null; // 'iron_beam' or 'davids_sling'
+let defenseSystemTimer = 0, defenseSystemKills = 0, defenseSystemMaxKills = 0;
+let defenseSystemTarget = null;
+// Legacy power-up arrays kept for cleanup
+let powerUps = [];
 let cityDamage = 0; // damage taken by current city (accumulates over 3 waves)
 let cityMaxHP = 5; // endurance per city (varies by city)
 let killFeed = []; // legacy
 let killCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
 let spawnCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
 let shotsFired = 0, shotsHit = 0;
-let shieldHP = 0; // shield blocks
+let defenseBtn1Rect = { x: 0, y: 0, w: 0, h: 0 }; // Iron Beam tap target
+let defenseBtn2Rect = { x: 0, y: 0, w: 0, h: 0 }; // David's Sling tap target
 // Play counter
 let totalPlaysCount = 0;
 // Legal/share overlay
@@ -2339,12 +2370,6 @@ function handleClick() {
       if (isInBtn(mouseX, mouseY, {x: rbX, y: rbY, w: rbW, h: rbH})) { paused = false; }
       return;
     }
-    // Check power-up collection
-    for (let i = powerUps.length-1; i >= 0; i--) {
-      const pu = powerUps[i];
-      const pd = Math.sqrt((mouseX - pu.x)**2 + (mouseY - pu.y)**2);
-      if (pd < 30) { collectPowerUp(pu); powerUps.splice(i, 1); return; }
-    }
     if (waveState === 'playing') fireInterceptor();
   }
 }
@@ -2352,6 +2377,11 @@ function handleClick() {
 // Keyboard for name input / pause
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && state === 'playing') { paused = !paused; e.preventDefault(); return; }
+  // Defense system activation (1 = Iron Beam, 2 = David's Sling)
+  if (state === 'playing' && !paused && waveState === 'playing') {
+    if (e.key === '1') { activateDefenseSystem('iron_beam'); e.preventDefault(); return; }
+    if (e.key === '2') { activateDefenseSystem('davids_sling'); e.preventDefault(); return; }
+  }
   if (state === 'nameinput') {
     if (e.key === 'Backspace') { nameInput = nameInput.slice(0, -1); e.preventDefault(); }
     else if (e.key === 'Enter' && nameInput.length > 0) {
@@ -2461,7 +2491,11 @@ function startGame() {
   combo = 0; comboTimer = 0; maxCombo = 0; paused = false;
   missiles = []; interceptors = []; explosions = [];
   particles = []; floatingTexts = []; smokeTrails = [];
-  powerUps = []; activePower = null; activePowerTimer = 0;
+  powerUps = [];
+  launcherReloading = false; launcherReloadTimer = 0; launcherReloadDuration = 0;
+  tokenBank = 0; consecutiveHits = 0;
+  activeDefenseSystem = null; defenseSystemTimer = 0; defenseSystemKills = 0; defenseSystemTarget = null;
+  ammo = LAUNCHER_POD_SIZE; maxAmmo = LAUNCHER_POD_SIZE;
   cityDamage = 0; killFeed = [];
   killCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
   spawnCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
@@ -2510,6 +2544,8 @@ function startWave() {
     // Reset city endurance for new city
     cityDamage = 0;
     cityMaxHP = CITIES[currentCityIdx].endurance || 5;
+    ammo = LAUNCHER_POD_SIZE; maxAmmo = LAUNCHER_POD_SIZE;
+    launcherReloading = false; launcherReloadTimer = 0;
     // Show city intro
     waveState = 'city_intro';
     cityIntroTimer = 150; // 2.5 seconds
@@ -2521,21 +2557,24 @@ function startWave() {
 function _startWaveActual() {
   const cfg = getWaveConfig(wave);
   waveMissilesLeft = cfg.missiles;
-  // Arsenal: 4x total threats for generous ammo
-  maxAmmo = cfg.missiles * 4;
-  ammo = maxAmmo;
+  maxAmmo = LAUNCHER_POD_SIZE;
+  // Ammo only resets on city change — carries between waves within a city
   missileTimer = 0; waveState = 'playing';
   waveTransitionTimer = 0;
   // Note: cityDamage accumulates over all 3 waves per city, only resets on city change
 }
 
 function fireInterceptor() {
-  const unlimitedAmmo = activePower === 'rapid' && activePowerTimer > 0;
-  if (ammo <= 0 && !unlimitedAmmo) {
-    addFloat(batteryX, batteryY - 40, t('noAmmo'), '#ff4444', 16);
+  if (launcherReloading) {
+    addFloat(batteryX, batteryY - 40, t('reloading'), '#ffaa33', 16);
     return;
   }
-  if (!unlimitedAmmo) ammo--;
+  if (ammo <= 0) {
+    startLauncherReload();
+    return;
+  }
+  ammo--;
+  if (ammo <= 0) startLauncherReload();
   shotsFired++;
   if (!tutorialSeen) { tutorialSeen = true; localStorage.setItem('tutorialSeen', '1'); }
   const speed = 10 * getComboBuffs().speedMult;
@@ -2672,15 +2711,19 @@ function addCombo() {
   combo++; comboTimer = 999;
   if (combo > maxCombo) maxCombo = combo;
   if (combo >= 3) playSound('combo');
-  // Spawn power-up at every x5 combo
-  if (combo > 0 && combo % 5 === 0) {
-    // Spawn at a random missile position or center
-    const px = W * 0.2 + Math.random() * W * 0.6;
-    const py = 50 + Math.random() * 100;
-    spawnPowerUp(px, py);
+  // Token earning: every 5 consecutive hits = +1 defense token
+  consecutiveHits++;
+  if (consecutiveHits > 0 && consecutiveHits % CONSECUTIVE_HITS_FOR_TOKEN === 0) {
+    if (tokenBank < TOKEN_BANK_MAX) {
+      tokenBank++;
+      addFloat(batteryX, batteryY - 60, t('tokenEarned'), '#ffdd00', 20);
+      playSound('combo');
+    } else {
+      addFloat(batteryX, batteryY - 60, t('tokenBankFull'), '#ffaa33', 14);
+    }
   }
 }
-function resetCombo() { combo = 0; comboTimer = 0; }
+function resetCombo() { combo = 0; comboTimer = 0; consecutiveHits = 0; }
 function getMultiplier() {
   if (combo < 3) return 1;
   if (combo < 6) return 2;
@@ -2763,33 +2806,33 @@ let shakeMaxDuration = 0;
 function shake(d) { shakeDuration = Math.max(shakeDuration, d); shakeMaxDuration = Math.max(shakeMaxDuration, d); }
 
 // Power-up system - spawned from x5 combos
-const POWER_TYPES = ['shield', 'rapid', 'emp'];
-function spawnPowerUp(x, y) {
-  const type = POWER_TYPES[Math.floor(Math.random() * POWER_TYPES.length)];
-  powerUps.push({ x, y, type, vy: 0.5, life: 480, pulse: 0 }); // floats down slowly, 8s lifespan
+// ==================== LAUNCHER RELOAD ====================
+function startLauncherReload() {
+  if (launcherReloading) return;
+  launcherReloading = true;
+  launcherReloadDuration = RELOAD_TIMES[currentCityIdx] || 300;
+  launcherReloadTimer = launcherReloadDuration;
+  playSound('launch'); // reuse launch sound for now
 }
-function collectPowerUp(pu) {
-  if (pu.type === 'shield') {
-    shieldHP = 1;
-    addFloat(pu.x, pu.y, t('powerShield'), '#ffdd00', 22);
-  } else if (pu.type === 'rapid') {
-    activePower = 'rapid';
-    activePowerTimer = 900; // 15 seconds of unlimited ammo
-    addFloat(pu.x, pu.y, t('powerRapid'), '#00ddff', 22);
-  } else if (pu.type === 'emp') {
-    // Destroy all on-screen threats
-    for (let i = missiles.length-1; i >= 0; i--) {
-      const m = missiles[i];
-      boom(m.x, m.y, '#00ddff', 15);
-      score += m.points;
-      missiles.splice(i, 1);
-    }
-    screenFlash = 0.3;
-    shake(10);
-    addFloat(pu.x, pu.y, t('powerEMP'), '#ff00ff', 24);
-    playSound('boss_destroy');
+
+// ==================== DEFENSE SYSTEMS (Iron Beam / David's Sling) ====================
+function activateDefenseSystem(type) {
+  if (activeDefenseSystem) { addFloat(W/2, H * 0.4, t('systemActive'), '#ffaa33', 16); return; }
+  if (tokenBank <= 0) { addFloat(W/2, H * 0.4, t('noTokens'), '#ff4444', 16); return; }
+  if (type === 'iron_beam') {
+    const targets = missiles.filter(m => m.type === 'rocket' || m.type === 'drone');
+    if (targets.length === 0) { addFloat(W/2, H * 0.4, t('noTargets'), '#ff6666', 14); return; }
+  } else if (type === 'davids_sling') {
+    const targets = missiles.filter(m => m.type === 'ballistic');
+    if (targets.length === 0) { addFloat(W/2, H * 0.4, t('noTargets'), '#ff6666', 14); return; }
   }
-  playSound('combo');
+  tokenBank--;
+  activeDefenseSystem = type;
+  defenseSystemKills = 0;
+  defenseSystemMaxKills = type === 'iron_beam' ? IRON_BEAM_MAX_KILLS : DAVIDS_SLING_MAX_KILLS;
+  defenseSystemTimer = 0;
+  defenseSystemTarget = null;
+  playSound(type === 'iron_beam' ? 'combo' : 'launch');
 }
 
 // ==================== UPDATE ====================
@@ -2844,15 +2887,6 @@ function update() {
       m.x += Math.sin(frame * 0.08 + m.wobbleOffset) * 2.5;
     }
     if (m.y >= GROUND_Y) {
-      // Shield blocks one hit
-      if (shieldHP > 0) {
-        shieldHP--;
-        addFloat(m.x, m.y - 20, '🛡️', '#ffdd00', 20);
-        boom(m.x, m.y, '#ffdd00', 20);
-        playSound('combo');
-        missiles.splice(i, 1);
-        continue;
-      }
       cityDamage++; resetCombo();
       // Big city explosion - multiple blasts, fire, debris
       boom(m.x, m.y, '#ff4400', 50, true);
@@ -2966,7 +3000,9 @@ function update() {
       for (let j = missiles.length-1; j >= 0; j--) {
         const m = missiles[j];
         const bd = Math.sqrt((ic.x-m.x)**2 + (ic.y-m.y)**2);
-        if (bd < getComboBuffs().blastRadius) {
+        const cutoffY = ALTITUDE_CUTOFFS[m.type] || GROUND_Y;
+          if (m.y > cutoffY) { if (bd < getComboBuffs().blastRadius + 20) addFloat(m.x, m.y - 10, t('belowCutoff'), '#ff6666', 12); continue; }
+          if (bd < getComboBuffs().blastRadius) {
           detonationHit = true;
           m.hp--;
           if (m.hp <= 0) {
@@ -2994,6 +3030,8 @@ function update() {
     for (let j = missiles.length-1; j >= 0; j--) {
       const m = missiles[j];
       const d = Math.sqrt((ic.x-m.x)**2 + (ic.y-m.y)**2);
+      const cutoffY2 = ALTITUDE_CUTOFFS[m.type] || GROUND_Y;
+      if (m.y > cutoffY2) continue;
       if (d < (m.hitbox || 28)) {
         m.hp--;
         if (m.hp <= 0) {
@@ -3070,19 +3108,57 @@ function update() {
     if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
   }
 
-  // Power-up update: float down, pulse, lifetime
-  for (let i = powerUps.length-1; i >= 0; i--) {
-    const pu = powerUps[i];
-    pu.y += pu.vy;
-    pu.pulse += 0.08;
-    pu.life--;
-    if (pu.life <= 0 || pu.y > GROUND_Y) { powerUps.splice(i, 1); continue; }
+  // Launcher reload countdown
+  if (launcherReloading) {
+    launcherReloadTimer--;
+    if (launcherReloadTimer <= 0) {
+      launcherReloading = false;
+      ammo = LAUNCHER_POD_SIZE;
+      addFloat(batteryX, batteryY - 40, '🔄 20', '#44ff88', 18);
+      playSound('combo');
+    }
   }
 
-  // Active power-up timer countdown
-  if (activePower && activePowerTimer > 0) {
-    activePowerTimer--;
-    if (activePowerTimer <= 0) { activePower = null; }
+  // Active defense system tick (Iron Beam / David's Sling)
+  if (activeDefenseSystem) {
+    defenseSystemTimer++;
+    const killInterval = activeDefenseSystem === 'iron_beam' ? IRON_BEAM_KILL_INTERVAL : DAVIDS_SLING_KILL_INTERVAL;
+    if (defenseSystemTimer % killInterval === 0 || defenseSystemTimer === 1) {
+      let validTargets;
+      if (activeDefenseSystem === 'iron_beam') {
+        validTargets = missiles.filter(m => (m.type === 'rocket' || m.type === 'drone') && m.y > 0 && m.y < GROUND_Y);
+      } else {
+        validTargets = missiles.filter(m => m.type === 'ballistic' && m.y > 0 && m.y < GROUND_Y);
+      }
+      if (validTargets.length > 0 && defenseSystemKills < defenseSystemMaxKills) {
+        validTargets.sort((a, b) => b.y - a.y); // closest to ground first
+        const target = validTargets[0];
+        defenseSystemTarget = target;
+        const idx = missiles.indexOf(target);
+        if (idx !== -1) {
+          addCombo();
+          const mult = getMultiplier();
+          const pts = target.points * mult;
+          score += pts;
+          if (activeDefenseSystem === 'iron_beam') {
+            boom(target.x, target.y, '#00ffff', 15);
+          } else {
+            boom(target.x, target.y, '#ff8800', 30, true);
+          }
+          let text = '+' + pts;
+          if (mult > 1) text += ' (x' + mult + ')';
+          addFloat(target.x, target.y - 10, text, '#00ffff', 18);
+          if (killCounts[target.type] !== undefined) killCounts[target.type]++;
+          missiles.splice(idx, 1);
+          defenseSystemKills++;
+          shotsHit++;
+        }
+      }
+      if (defenseSystemKills >= defenseSystemMaxKills || (validTargets && validTargets.length === 0)) {
+        activeDefenseSystem = null;
+        defenseSystemTarget = null;
+      }
+    }
   }
 
   if (shakeDuration > 0) {
@@ -4233,20 +4309,37 @@ function draw() {
 
   // HUD
   // Power-ups floating
-  powerUps.forEach(pu => {
-    const s = 16 + Math.sin(pu.pulse) * 3;
-    const alpha = pu.life < 60 ? pu.life / 60 : 1;
-    ctx.globalAlpha = alpha;
-    const emoji = pu.type === 'shield' ? '🛡️' : pu.type === 'rapid' ? '⚡' : '💥';
-    // Glow circle
-    ctx.fillStyle = pu.type === 'shield' ? 'rgba(255,220,0,0.2)' : pu.type === 'rapid' ? 'rgba(0,200,255,0.2)' : 'rgba(255,0,255,0.2)';
-    ctx.beginPath(); ctx.arc(pu.x, pu.y, s + 6, 0, Math.PI*2); ctx.fill();
-    ctx.font = `${s}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#fff';
-    ctx.fillText(emoji, pu.x, pu.y + s*0.35);
-    ctx.globalAlpha = 1;
-  });
+  // Defense system beam/projectile rendering (placeholder — Designer will polish)
+  if (activeDefenseSystem && defenseSystemTarget) {
+    const t2 = defenseSystemTarget;
+    if (activeDefenseSystem === 'iron_beam') {
+      // Cyan laser beam from battery to target
+      ctx.save();
+      ctx.strokeStyle = '#00ffff';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#00ffff';
+      ctx.shadowBlur = 15;
+      ctx.globalAlpha = 0.7 + Math.sin(frame * 0.3) * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(batteryX, batteryY - 30);
+      ctx.lineTo(t2.x, t2.y);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    } else {
+      // David's Sling — large projectile heading to target
+      const dx = t2.x - batteryX, dy = t2.y - (batteryY - 30);
+      const angle = Math.atan2(dy, dx);
+      ctx.save();
+      ctx.translate(t2.x - Math.cos(angle) * 20, t2.y - Math.sin(angle) * 20);
+      ctx.rotate(angle);
+      ctx.fillStyle = '#ff8800';
+      ctx.fillRect(-8, -3, 16, 6);
+      ctx.fillStyle = '#ffcc44';
+      ctx.fillRect(-12, -2, 4, 4);
+      ctx.restore();
+    }
+  }
 
   // Kill feed now rendered inside drawHUD()
 
@@ -4457,10 +4550,7 @@ function drawHUD() {
   ctx.font = `bold ${fz(9)}px Arial`;
   ctx.textAlign = 'left';
   ctx.fillText(`${cityDamage}/${cityMaxHP}`, hpX + hpW + fz(4), hpY + hpH);
-  if (shieldHP > 0) {
-    ctx.font = `${fz(10)}px Arial`;
-    ctx.fillText('🛡️', hpX + hpW + fz(26), hpY + hpH);
-  }
+  // Shield removed — defense token system
 
   // -- Missiles remaining (center) --
   const missilesInPlay = waveMissilesLeft + missiles.length;
@@ -4487,17 +4577,15 @@ function drawHUD() {
   ctx.textAlign = 'right';
   ctx.fillText(t('score').toUpperCase(), sX, barH * 0.85);
 
-  // ===== POWER-UP PILL (below bar, left) =====
-  if (activePower && activePowerTimer > 0) {
-    const py = barH + 3;
-    const pwSecs = Math.ceil(activePowerTimer / 60);
-    const pwIcon = activePower === 'rapid' ? '⚡' : '💥';
-    ctx.fillStyle = 'rgba(255,170,50,0.2)';
-    ctx.beginPath(); ctx.roundRect(fz(6), py, fz(36), fz(13), 4); ctx.fill();
-    ctx.fillStyle = '#ffaa33';
-    ctx.font = `bold ${fz(9)}px Arial`;
-    ctx.textAlign = 'left';
-    ctx.fillText(`${pwIcon} ${pwSecs}s`, fz(9), py + fz(10));
+  // ===== TOKEN BANK + DEFENSE SYSTEM (below bar, left) =====
+  { const py = barH + 3;
+    for (let ti = 0; ti < TOKEN_BANK_MAX; ti++) { const tx = fz(8) + ti * fz(14); ctx.fillStyle = ti < tokenBank ? 'rgba(255,220,0,0.8)' : 'rgba(100,100,100,0.3)'; ctx.beginPath(); ctx.arc(tx + fz(5), py + fz(6), fz(5), 0, Math.PI*2); ctx.fill(); if (ti < tokenBank) { ctx.fillStyle = '#ffdd00'; ctx.font = `bold ${fz(6)}px Arial`; ctx.textAlign = 'center'; ctx.fillText('⚡', tx + fz(5), py + fz(8)); } }
+    const progress = consecutiveHits % CONSECUTIVE_HITS_FOR_TOKEN;
+    if (progress > 0 && tokenBank < TOKEN_BANK_MAX) { ctx.fillStyle = 'rgba(255,220,0,0.4)'; ctx.font = `${fz(6)}px Arial`; ctx.textAlign = 'left'; ctx.fillText(`${progress}/${CONSECUTIVE_HITS_FOR_TOKEN}`, fz(8) + TOKEN_BANK_MAX * fz(14), py + fz(8)); }
+    ctx.fillStyle = 'rgba(150,200,255,0.5)'; ctx.font = `${fz(6)}px Arial`; ctx.textAlign = 'left';
+    ctx.fillText(t('pressForBeam') + '  ' + t('pressForSling'), fz(8), py + fz(17));
+    if (activeDefenseSystem) { const sysName = activeDefenseSystem === 'iron_beam' ? t('ironBeam') : t('davidsSling'); ctx.fillStyle = activeDefenseSystem === 'iron_beam' ? '#00ffff' : '#ff8800'; ctx.font = `bold ${fz(9)}px Arial`; ctx.fillText(`${sysName} ${defenseSystemKills}/${defenseSystemMaxKills}`, fz(8), py + fz(28)); }
+    if (launcherReloading) { const rlPct = 1 - (launcherReloadTimer / launcherReloadDuration); const rlS = (launcherReloadTimer / 60).toFixed(1); ctx.fillStyle = 'rgba(255,150,50,0.3)'; ctx.fillRect(fz(8), py + fz(32), fz(60), fz(6)); ctx.fillStyle = 'rgba(255,150,50,0.8)'; ctx.fillRect(fz(8), py + fz(32), fz(60) * rlPct, fz(6)); ctx.fillStyle = '#ffaa33'; ctx.font = `bold ${fz(7)}px Arial`; ctx.fillText(`${t('reloading')} ${rlS}s`, fz(8), py + fz(47)); }
   }
 
   // ===== COMBO (center, bigger — resets on miss not timer) =====
@@ -4729,38 +4817,39 @@ function drawLangToggle(baseY) {
 }
 
 function drawLeaderboardTable(baseY) {
+  const mobLB = isMobileDevice;
   ctx.fillStyle = '#6aacee';
-  ctx.font = `bold ${fz(18)}px Arial`;
+  ctx.font = `bold ${mobLB ? 18 : fz(18)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(t('leaderboard'), W/2, baseY);
   if (leaderboardLoading) {
     ctx.fillStyle = '#888';
-    ctx.font = `${fz(13)}px Arial`;
-    ctx.fillText('...', W/2, baseY + fz(25));
+    ctx.font = `${mobLB ? 13 : fz(13)}px Arial`;
+    ctx.fillText('...', W/2, baseY + (mobLB ? 22 : fz(25)));
     return;
   }
   if (leaderboardData.length === 0) {
     ctx.fillStyle = '#666';
-    ctx.font = `${fz(12)}px Arial`;
-    ctx.fillText('-', W/2, baseY + fz(25));
+    ctx.font = `${mobLB ? 12 : fz(12)}px Arial`;
+    ctx.fillText('-', W/2, baseY + (mobLB ? 22 : fz(25)));
     return;
   }
-  const colW = Math.min(W - 30, fz(320));
+  const colW = mobLB ? Math.min(W - 20, 400) : Math.min(W - 30, fz(320));
   const lx = W/2 - colW/2;
-  const rowH = fz(22);
+  const rowH = mobLB ? 22 : fz(22);
   leaderboardData.forEach((entry, i) => {
     const ey = baseY + rowH + i * rowH;
     const isTop = i < 3;
     ctx.fillStyle = isTop ? ['#ffdd00','#cccccc','#cc8844'][i] : 'rgba(180,200,220,0.5)';
-    ctx.font = isTop ? `bold ${fz(13)}px Arial` : `${fz(13)}px Arial`;
+    ctx.font = isTop ? `bold ${mobLB ? 14 : fz(13)}px Arial` : `${mobLB ? 14 : fz(13)}px Arial`;
     ctx.textAlign = 'left';
     ctx.fillText(`${i+1}.`, lx, ey);
     const flag = countryToFlag(entry.country);
-    ctx.fillText(`${flag} ${entry.name || '???'}`, lx + fz(24), ey);
+    ctx.fillText(`${flag} ${entry.name || '???'}`, lx + (mobLB ? 24 : fz(24)), ey);
     ctx.textAlign = 'right';
-    ctx.fillText(`${entry.score}`, lx + colW - fz(50), ey);
+    ctx.fillText(`${entry.score}`, lx + colW - (mobLB ? 50 : fz(50)), ey);
     ctx.fillStyle = 'rgba(130,160,200,0.4)';
-    ctx.font = `${fz(10)}px Arial`;
+    ctx.font = `${mobLB ? 10 : fz(10)}px Arial`;
     ctx.fillText(`${t('wave')} ${entry.wave || '?'}`, lx + colW, ey);
   });
 }
@@ -4791,7 +4880,7 @@ function drawMenuButton(x, y, w, h, text, colors, icon, isHovered) {
   ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.stroke();
   // Text with icon
   ctx.fillStyle = '#fff';
-  ctx.font = `bold ${fz(18)}px Arial`;
+  ctx.font = `bold ${isMobileDevice ? 16 : fz(18)}px Arial`;
   ctx.textAlign = 'center';
   const displayText = icon ? (isRTL() ? `${text} ${icon}` : `${icon} ${text}`) : text;
   ctx.fillText(displayText, x + w/2, y + h*0.65);
@@ -4802,10 +4891,10 @@ function drawMenu() {
   ctx.fillRect(0,0,W,H);
 
   // Language toggle at top center
-  drawLangToggle(fz(10));
+  drawLangToggle(isMobileDevice ? 10 : fz(10));
 
   if (showLeaderboard) {
-    drawLeaderboardTable(H * 0.12);
+    drawLeaderboardTable(isMobileDevice ? 70 : H * 0.12);
     ctx.fillStyle = 'rgba(150,180,220,0.4)';
     ctx.font = `${fz(12)}px Arial`;
     ctx.textAlign = 'center';
@@ -4816,11 +4905,15 @@ function drawMenu() {
   // Legal overlay
   if (showLegalOverlay) { drawLegalOverlay(); return; }
 
-  const bigBtnW = Math.min(W * 0.7, fz(320));
-  const bigBtnH = fz(55);
+  const mobM = isMobileDevice;
+  const bigBtnW = mobM ? Math.min(W * 0.7, 280) : Math.min(W * 0.7, fz(320));
+  const bigBtnH = mobM ? 44 : fz(55);
   // Vertically center menu content
-  const totalMenuH = fz(38) + fz(22) + fz(42) + (highScore > 0 ? fz(18) : 0) + fz(6) + bigBtnH*3 + fz(10)*2 + fz(18) + fz(28) + fz(14) + fz(14) + fz(40) + fz(12) + fz(30);
-  const langToggleBottom = fz(10) + fz(42) + fz(8) + fz(38);
+  const btnGapM = mobM ? 8 : fz(10);
+  const totalMenuH = mobM
+    ? (32 + 18 + 32 + (highScore > 0 ? 16 : 0) + 6 + bigBtnH*3 + btnGapM*2 + 14 + 24 + 12 + 12 + 34 + 10 + 24)
+    : (fz(38) + fz(22) + fz(42) + (highScore > 0 ? fz(18) : 0) + fz(6) + bigBtnH*3 + fz(10)*2 + fz(18) + fz(28) + fz(14) + fz(14) + fz(40) + fz(12) + fz(30));
+  const langToggleBottom = mobM ? (10 + 36 + 10 + 28) : (fz(10) + fz(42) + fz(8) + fz(38));
   let curY = Math.max(langToggleBottom, (H - totalMenuH) / 2);
 
   // Title with glow
@@ -4828,33 +4921,33 @@ function drawMenu() {
   ctx.save();
   ctx.shadowColor = '#00cc66'; ctx.shadowBlur = 25;
   ctx.fillStyle = '#00dd66';
-  ctx.font = `bold ${fz(38)}px Arial`;
+  ctx.font = `bold ${mobM ? 32 : fz(38)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(t('title'), W/2, titleY);
   ctx.shadowBlur = 0;
   ctx.restore();
 
   ctx.fillStyle = '#7abcee';
-  ctx.font = `${fz(14)}px Arial`;
+  ctx.font = `${mobM ? 13 : fz(14)}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText(t('subtitle'), W/2, titleY + fz(22));
-  curY = titleY + fz(42);
+  ctx.fillText(t('subtitle'), W/2, titleY + (mobM ? 18 : fz(22)));
+  curY = titleY + (mobM ? 32 : fz(42));
 
   // Leaderboard #1 or local high score
   if (leaderboardData.length > 0) {
     const leader = leaderboardData[0];
     const flag = countryFlag(leader.country);
     ctx.fillStyle = '#ffdd00';
-    ctx.font = `bold ${fz(12)}px Arial`;
+    ctx.font = `bold ${mobM ? 12 : fz(12)}px Arial`;
     ctx.fillText(`🏆 ${leader.name} — ${leader.score} ${flag}`, W/2, curY);
-    curY += fz(18);
+    curY += mobM ? 16 : fz(18);
   } else if (highScore > 0) {
     ctx.fillStyle = '#ffdd00';
-    ctx.font = `${fz(12)}px Arial`;
+    ctx.font = `${mobM ? 12 : fz(12)}px Arial`;
     ctx.fillText(`${t('best')}: ${highScore}`, W/2, curY);
-    curY += fz(18);
+    curY += mobM ? 16 : fz(18);
   }
-  curY += fz(6);
+  curY += mobM ? 6 : fz(6);
 
   // ===== BIG BUTTONS =====
   const bx = W/2 - bigBtnW/2;
@@ -4863,30 +4956,30 @@ function drawMenu() {
   startBtnRect = { x: bx, y: curY, w: bigBtnW, h: bigBtnH };
   drawMenuButton(bx, curY, bigBtnW, bigBtnH, t('newGame'),
     ['#00cc66','#00bb55','#008833','rgba(0,200,100,0.35)','rgba(0,255,100,0.35)'], '▶', hoveredBtn === 'start');
-  curY += bigBtnH + fz(10);
+  curY += bigBtnH + btnGapM;
 
   // Leaderboard (blue)
   lbBtnRect = { x: bx, y: curY, w: bigBtnW, h: bigBtnH };
   drawMenuButton(bx, curY, bigBtnW, bigBtnH, t('leaderboard'),
     ['#2255aa','#1d4488','#153370','rgba(50,100,200,0.3)','rgba(80,150,255,0.3)'], '🏆', hoveredBtn === 'lb');
-  curY += bigBtnH + fz(10);
+  curY += bigBtnH + btnGapM;
 
   // Contact (dark blue)
   contactBtnRect = { x: bx, y: curY, w: bigBtnW, h: bigBtnH };
   drawMenuButton(bx, curY, bigBtnW, bigBtnH, t('contact'),
     ['#334466','#2a3a55','#223044','rgba(50,70,120,0.3)','rgba(100,130,200,0.2)'], '✉', hoveredBtn === 'contact');
-  curY += bigBtnH + fz(18);
+  curY += bigBtnH + (mobM ? 14 : fz(18));
 
   // Play counter
   ctx.fillStyle = 'rgba(80,100,140,0.4)';
-  const pcW = fz(200), pcH = fz(28);
+  const pcW = mobM ? 180 : fz(200), pcH = mobM ? 24 : fz(28);
   const pcX = W/2 - pcW/2;
   ctx.beginPath(); ctx.roundRect(pcX, curY, pcW, pcH, 6); ctx.fill();
   ctx.fillStyle = '#8899bb';
-  ctx.font = `${fz(12)}px Arial`;
+  ctx.font = `${mobM ? 11 : fz(12)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(`${t('gamesPlayed')}: ${totalPlaysCount.toLocaleString()}`, W/2, curY + pcH*0.7);
-  curY += pcH + fz(14);
+  curY += pcH + (mobM ? 10 : fz(14));
 
   // Share buttons (hidden in embed mode — replaced with attribution)
   if (isEmbedMode) {
@@ -4897,11 +4990,11 @@ function drawMenu() {
     curY += fz(24);
   } else {
   ctx.fillStyle = '#6688aa';
-  ctx.font = `${fz(11)}px Arial`;
+  ctx.font = `${mobM ? 11 : fz(11)}px Arial`;
   ctx.fillText(t('shareWith'), W/2, curY);
-  curY += fz(14);
-  const shareBtnSize = fz(40);
-  const shareGap = fz(10);
+  curY += mobM ? 12 : fz(14);
+  const shareBtnSize = mobM ? 34 : fz(40);
+  const shareGap = mobM ? 8 : fz(10);
   const shareTypes = ['whatsapp','twitter','email','copy'];
   const shareIcons = ['W','X','✉','🔗'];
   const shareColors = ['#25D366','#1DA1F2','#555577','#6688aa'];
@@ -4913,12 +5006,12 @@ function drawMenu() {
     ctx.fillStyle = shareColors[i];
     ctx.beginPath(); ctx.roundRect(sx2, curY, shareBtnSize, shareBtnSize, 8); ctx.fill();
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${fz(16)}px Arial`;
+    ctx.font = `bold ${mobM ? 14 : fz(16)}px Arial`;
     ctx.textAlign = 'center';
     ctx.fillText(shareIcons[i], sx2 + shareBtnSize/2, curY + shareBtnSize*0.65);
     shareBtnRects.push({ x: sx2, y: curY, w: shareBtnSize, h: shareBtnSize, type });
   });
-  curY += shareBtnSize + fz(12);
+  curY += shareBtnSize + (mobM ? 10 : fz(12));
 
   // Copied toast
   if (showCopiedToast > 0) {
@@ -5792,7 +5885,7 @@ function drawVictory() {
 
   // If leaderboard is open
   if (showLeaderboard) {
-    drawLeaderboardTable(H * 0.12);
+    drawLeaderboardTable(isMobileDevice ? 70 : H * 0.12);
     const btnW = fz(170), btnH = fz(40);
     const btnY2 = H - fz(80);
     playAgainBtnRect = { x: W/2 - btnW/2, y: btnY2, w: btnW, h: btnH };
@@ -5922,7 +6015,7 @@ function drawGameOver() {
 
   // If leaderboard is open, show full-screen leaderboard with back button
   if (showLeaderboard) {
-    drawLeaderboardTable(H * 0.12);
+    drawLeaderboardTable(isMobileDevice ? 70 : H * 0.12);
     // Play again button at bottom
     const btnW = fz(170), btnH = fz(40);
     const btnY2 = H - fz(80);
