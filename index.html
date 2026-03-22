@@ -4901,11 +4901,11 @@ function drawMenu() {
   drawLangToggle(isMobileDevice ? 10 : fz(10));
 
   if (showLeaderboard) {
-    drawLeaderboardTable(mobM ? 70 : H * 0.12);
+    drawLeaderboardTable(isMobileDevice ? 70 : H * 0.12);
     ctx.fillStyle = 'rgba(150,180,220,0.4)';
-    ctx.font = `${mobM ? 12 : fz(12)}px Arial`;
+    ctx.font = `${isMobileDevice ? 12 : fz(12)}px Arial`;
     ctx.textAlign = 'center';
-    ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, mobM ? 340 : H - 30);
+    ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, isMobileDevice ? 340 : H - 30);
     return;
   }
 
