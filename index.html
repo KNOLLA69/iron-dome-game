@@ -4825,38 +4825,43 @@ function drawLangToggle(baseY) {
 
 function drawLeaderboardTable(baseY) {
   const mobLB = isMobileDevice;
+  const titleSz = mobLB ? 24 : fz(24);
+  const entrySz = mobLB ? 18 : fz(17);
+  const topSz = mobLB ? 20 : fz(19);
+  const waveSz = mobLB ? 12 : fz(12);
+  const rowH = mobLB ? 32 : fz(30);
+
   ctx.fillStyle = '#6aacee';
-  ctx.font = `bold ${mobLB ? 18 : fz(18)}px Arial`;
+  ctx.font = `bold ${titleSz}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(t('leaderboard'), W/2, baseY);
   if (leaderboardLoading) {
     ctx.fillStyle = '#888';
-    ctx.font = `${mobLB ? 13 : fz(13)}px Arial`;
-    ctx.fillText('...', W/2, baseY + (mobLB ? 22 : fz(25)));
+    ctx.font = `${entrySz}px Arial`;
+    ctx.fillText('...', W/2, baseY + rowH);
     return;
   }
   if (leaderboardData.length === 0) {
     ctx.fillStyle = '#666';
-    ctx.font = `${mobLB ? 12 : fz(12)}px Arial`;
-    ctx.fillText('-', W/2, baseY + (mobLB ? 22 : fz(25)));
+    ctx.font = `${entrySz}px Arial`;
+    ctx.fillText('-', W/2, baseY + rowH);
     return;
   }
-  const colW = mobLB ? Math.min(W - 20, 400) : Math.min(W - 30, fz(320));
+  const colW = mobLB ? Math.min(W - 30, 460) : Math.min(W * 0.7, fz(500));
   const lx = W/2 - colW/2;
-  const rowH = mobLB ? 22 : fz(22);
   leaderboardData.forEach((entry, i) => {
-    const ey = baseY + rowH + i * rowH;
+    const ey = baseY + rowH * 1.2 + i * rowH;
     const isTop = i < 3;
     ctx.fillStyle = isTop ? ['#ffdd00','#cccccc','#cc8844'][i] : 'rgba(180,200,220,0.5)';
-    ctx.font = isTop ? `bold ${mobLB ? 14 : fz(13)}px Arial` : `${mobLB ? 14 : fz(13)}px Arial`;
+    ctx.font = isTop ? `bold ${topSz}px Arial` : `${entrySz}px Arial`;
     ctx.textAlign = 'left';
     ctx.fillText(`${i+1}.`, lx, ey);
     const flag = countryToFlag(entry.country);
-    ctx.fillText(`${flag} ${entry.name || '???'}`, lx + (mobLB ? 24 : fz(24)), ey);
+    ctx.fillText(`${flag} ${entry.name || '???'}`, lx + (mobLB ? 32 : fz(30)), ey);
     ctx.textAlign = 'right';
-    ctx.fillText(`${entry.score}`, lx + colW - (mobLB ? 50 : fz(50)), ey);
+    ctx.fillText(`${entry.score}`, lx + colW - (mobLB ? 55 : fz(55)), ey);
     ctx.fillStyle = 'rgba(130,160,200,0.4)';
-    ctx.font = `${mobLB ? 10 : fz(10)}px Arial`;
+    ctx.font = `${waveSz}px Arial`;
     ctx.fillText(`${t('wave')} ${entry.wave || '?'}`, lx + colW, ey);
   });
 }
@@ -4901,11 +4906,11 @@ function drawMenu() {
   drawLangToggle(isMobileDevice ? 10 : fz(10));
 
   if (showLeaderboard) {
-    drawLeaderboardTable(isMobileDevice ? 70 : H * 0.12);
+    drawLeaderboardTable(isMobileDevice ? 80 : H * 0.15);
     ctx.fillStyle = 'rgba(150,180,220,0.4)';
-    ctx.font = `${isMobileDevice ? 12 : fz(12)}px Arial`;
+    ctx.font = `${isMobileDevice ? 14 : fz(13)}px Arial`;
     ctx.textAlign = 'center';
-    ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, isMobileDevice ? 340 : H - 30);
+    ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, isMobileDevice ? 460 : H - 30);
     return;
   }
 
@@ -4913,50 +4918,50 @@ function drawMenu() {
   if (showLegalOverlay) { drawLegalOverlay(); return; }
 
   const mobM = isMobileDevice;
-  const bigBtnW = mobM ? Math.min(W * 0.7, 280) : Math.min(W * 0.7, fz(320));
-  const bigBtnH = mobM ? 44 : fz(55);
+  const bigBtnW = mobM ? Math.min(W * 0.75, 340) : Math.min(W * 0.7, fz(320));
+  const bigBtnH = mobM ? 50 : fz(55);
   // Vertically center menu content
-  const btnGapM = mobM ? 8 : fz(10);
+  const btnGapM = mobM ? 10 : fz(10);
   const totalMenuH = mobM
-    ? (32 + 18 + 32 + (highScore > 0 ? 16 : 0) + 6 + bigBtnH*3 + btnGapM*2 + 14 + 24 + 12 + 12 + 34 + 10 + 24)
+    ? (38 + 20 + 36 + (highScore > 0 ? 18 : 0) + 10 + bigBtnH*3 + btnGapM*2 + 16 + 26 + 14 + 14 + 36 + 12 + 26)
     : (fz(38) + fz(22) + fz(42) + (highScore > 0 ? fz(18) : 0) + fz(6) + bigBtnH*3 + fz(10)*2 + fz(18) + fz(28) + fz(14) + fz(14) + fz(40) + fz(12) + fz(30));
-  // Flags end at 10+36=46 on mobile, need gap + title font height before baseline
-  const langToggleBottom = mobM ? (10 + 36 + 20 + 32) : (fz(10) + fz(42) + fz(8) + fz(38));
-  // Mobile: start below flags with proper gap. Desktop: vertically center.
-  let curY = mobM ? langToggleBottom : Math.max(langToggleBottom, (H - totalMenuH) / 2);
+  // Flags end at 10+36=46 on mobile. Need title below with gap.
+  const langToggleBottom = mobM ? (10 + 36 + 24 + 38) : (fz(10) + fz(42) + fz(8) + fz(38));
+  // Center content vertically, but clamp so it stays below flags
+  let curY = Math.max(langToggleBottom, (H - totalMenuH) / 2);
 
   // Title with glow
   const titleY = curY;
   ctx.save();
   ctx.shadowColor = '#00cc66'; ctx.shadowBlur = 25;
   ctx.fillStyle = '#00dd66';
-  ctx.font = `bold ${mobM ? 32 : fz(38)}px Arial`;
+  ctx.font = `bold ${mobM ? 38 : fz(38)}px Arial`;
   ctx.textAlign = 'center';
   ctx.fillText(t('title'), W/2, titleY);
   ctx.shadowBlur = 0;
   ctx.restore();
 
   ctx.fillStyle = '#7abcee';
-  ctx.font = `${mobM ? 13 : fz(14)}px Arial`;
+  ctx.font = `${mobM ? 16 : fz(14)}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText(t('subtitle'), W/2, titleY + (mobM ? 18 : fz(22)));
-  curY = titleY + (mobM ? 32 : fz(42));
+  ctx.fillText(t('subtitle'), W/2, titleY + (mobM ? 22 : fz(22)));
+  curY = titleY + (mobM ? 40 : fz(42));
 
   // Leaderboard #1 or local high score
   if (leaderboardData.length > 0) {
     const leader = leaderboardData[0];
     const flag = countryFlag(leader.country);
     ctx.fillStyle = '#ffdd00';
-    ctx.font = `bold ${mobM ? 12 : fz(12)}px Arial`;
+    ctx.font = `bold ${mobM ? 14 : fz(12)}px Arial`;
     ctx.fillText(`🏆 ${leader.name} — ${leader.score} ${flag}`, W/2, curY);
-    curY += mobM ? 16 : fz(18);
+    curY += mobM ? 20 : fz(18);
   } else if (highScore > 0) {
     ctx.fillStyle = '#ffdd00';
-    ctx.font = `${mobM ? 12 : fz(12)}px Arial`;
+    ctx.font = `${mobM ? 14 : fz(12)}px Arial`;
     ctx.fillText(`${t('best')}: ${highScore}`, W/2, curY);
-    curY += mobM ? 16 : fz(18);
+    curY += mobM ? 20 : fz(18);
   }
-  curY += mobM ? 6 : fz(6);
+  curY += mobM ? 12 : fz(6);
 
   // ===== BIG BUTTONS =====
   const bx = W/2 - bigBtnW/2;
@@ -5895,9 +5900,9 @@ function drawVictory() {
   // If leaderboard is open
   if (showLeaderboard) {
     const mobV = isMobileDevice;
-    drawLeaderboardTable(mobV ? 70 : H * 0.12);
-    const btnW = mobV ? 160 : fz(170), btnH = mobV ? 38 : fz(40);
-    const btnY2 = mobV ? 340 : H - fz(80);
+    drawLeaderboardTable(mobV ? 80 : H * 0.15);
+    const btnW = mobV ? 180 : fz(170), btnH = mobV ? 42 : fz(40);
+    const btnY2 = mobV ? 470 : H - fz(80);
     playAgainBtnRect = { x: W/2 - btnW/2, y: btnY2, w: btnW, h: btnH };
     const btnGrad2 = ctx.createLinearGradient(0, btnY2, 0, btnY2 + btnH);
     btnGrad2.addColorStop(0, '#00bb55');
@@ -6027,9 +6032,9 @@ function drawGameOver() {
   // If leaderboard is open, show full-screen leaderboard with back button
   if (showLeaderboard) {
     const mobGOlb = isMobileDevice;
-    drawLeaderboardTable(mobGOlb ? 70 : H * 0.12);
-    const btnW = mobGOlb ? 160 : fz(170), btnH = mobGOlb ? 38 : fz(40);
-    const btnY2 = mobGOlb ? 340 : H - fz(80);
+    drawLeaderboardTable(mobGOlb ? 80 : H * 0.15);
+    const btnW = mobGOlb ? 180 : fz(170), btnH = mobGOlb ? 42 : fz(40);
+    const btnY2 = mobGOlb ? 470 : H - fz(80);
     playAgainBtnRect = { x: W/2 - btnW/2, y: btnY2, w: btnW, h: btnH };
     const btnGrad2 = ctx.createLinearGradient(0, btnY2, 0, btnY2+btnH);
     btnGrad2.addColorStop(0, '#00bb55');
