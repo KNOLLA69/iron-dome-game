@@ -4552,13 +4552,20 @@ function drawHUD() {
   ctx.fillText(`${cityDamage}/${cityMaxHP}`, hpX + hpW + fz(4), hpY + hpH);
   // Shield removed — defense token system
 
-  // -- Missiles remaining (center) --
-  const missilesInPlay = waveMissilesLeft + missiles.length;
-  if (waveState === 'playing' && missilesInPlay > 0) {
-    ctx.fillStyle = 'rgba(120,190,255,0.6)';
-    ctx.font = `${fz(10)}px Arial`;
+  // -- Launcher pod ammo (center) --
+  if (waveState === 'playing') {
     ctx.textAlign = 'center';
-    ctx.fillText(`${missilesInPlay} ${t('missiles')}`, W/2, barH * 0.6);
+    const ammoColor = launcherReloading ? '#ffaa33' : ammo <= 5 ? '#ff4444' : 'rgba(120,190,255,0.8)';
+    ctx.fillStyle = ammoColor;
+    ctx.font = `bold ${fz(14)}px Arial`;
+    const ammoText = launcherReloading ? t('reloading') : `${ammo}/${LAUNCHER_POD_SIZE}`;
+    ctx.fillText(ammoText, W/2, barH * 0.65);
+    const missilesInPlay = waveMissilesLeft + missiles.length;
+    if (missilesInPlay > 0) {
+      ctx.fillStyle = 'rgba(120,190,255,0.4)';
+      ctx.font = `${fz(7)}px Arial`;
+      ctx.fillText(`${missilesInPlay} ${t('missiles')}`, W/2, barH * 0.88);
+    }
   }
 
   // -- Score (right, big + glowing) --
@@ -4894,11 +4901,11 @@ function drawMenu() {
   drawLangToggle(isMobileDevice ? 10 : fz(10));
 
   if (showLeaderboard) {
-    drawLeaderboardTable(isMobileDevice ? 70 : H * 0.12);
+    drawLeaderboardTable(mobM ? 70 : H * 0.12);
     ctx.fillStyle = 'rgba(150,180,220,0.4)';
-    ctx.font = `${fz(12)}px Arial`;
+    ctx.font = `${mobM ? 12 : fz(12)}px Arial`;
     ctx.textAlign = 'center';
-    ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, H - 30);
+    ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, mobM ? 340 : H - 30);
     return;
   }
 
@@ -4913,8 +4920,9 @@ function drawMenu() {
   const totalMenuH = mobM
     ? (32 + 18 + 32 + (highScore > 0 ? 16 : 0) + 6 + bigBtnH*3 + btnGapM*2 + 14 + 24 + 12 + 12 + 34 + 10 + 24)
     : (fz(38) + fz(22) + fz(42) + (highScore > 0 ? fz(18) : 0) + fz(6) + bigBtnH*3 + fz(10)*2 + fz(18) + fz(28) + fz(14) + fz(14) + fz(40) + fz(12) + fz(30));
-  const langToggleBottom = mobM ? (10 + 36 + 10 + 28) : (fz(10) + fz(42) + fz(8) + fz(38));
-  let curY = Math.max(langToggleBottom, (H - totalMenuH) / 2);
+  const langToggleBottom = mobM ? (10 + 36 + 30) : (fz(10) + fz(42) + fz(8) + fz(38));
+  // Mobile: start right below flags, don't center (tall canvas = too much dead space)
+  let curY = mobM ? langToggleBottom : Math.max(langToggleBottom, (H - totalMenuH) / 2);
 
   // Title with glow
   const titleY = curY;
@@ -5885,9 +5893,10 @@ function drawVictory() {
 
   // If leaderboard is open
   if (showLeaderboard) {
-    drawLeaderboardTable(isMobileDevice ? 70 : H * 0.12);
-    const btnW = fz(170), btnH = fz(40);
-    const btnY2 = H - fz(80);
+    const mobV = isMobileDevice;
+    drawLeaderboardTable(mobV ? 70 : H * 0.12);
+    const btnW = mobV ? 160 : fz(170), btnH = mobV ? 38 : fz(40);
+    const btnY2 = mobV ? 340 : H - fz(80);
     playAgainBtnRect = { x: W/2 - btnW/2, y: btnY2, w: btnW, h: btnH };
     const btnGrad2 = ctx.createLinearGradient(0, btnY2, 0, btnY2 + btnH);
     btnGrad2.addColorStop(0, '#00bb55');
@@ -5895,13 +5904,13 @@ function drawVictory() {
     ctx.fillStyle = btnGrad2;
     ctx.beginPath(); ctx.roundRect(playAgainBtnRect.x, btnY2, btnW, btnH, 10); ctx.fill();
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${fz(17)}px Arial`;
+    ctx.font = `bold ${mobV ? 16 : fz(17)}px Arial`;
     ctx.textAlign = 'center';
     ctx.fillText(t('playAgain'), W/2, btnY2 + btnH * 0.65);
-    lbBtnRect = { x: 0, y: H - fz(35), w: W, h: fz(35) };
+    lbBtnRect = { x: 0, y: btnY2 + btnH, w: W, h: 40 };
     ctx.fillStyle = 'rgba(150,180,220,0.4)';
-    ctx.font = `${fz(12)}px Arial`;
-    ctx.fillText(currentLang === 'he' ? '\u05DC\u05D7\u05E5 \u05DC\u05D7\u05D6\u05E8\u05D4' : 'Tap to go back', W/2, H - fz(10));
+    ctx.font = `${mobV ? 12 : fz(12)}px Arial`;
+    ctx.fillText(currentLang === 'he' ? '\u05DC\u05D7\u05E5 \u05DC\u05D7\u05D6\u05E8\u05D4' : 'Tap to go back', W/2, btnY2 + btnH + 24);
     return;
   }
 
@@ -6015,10 +6024,10 @@ function drawGameOver() {
 
   // If leaderboard is open, show full-screen leaderboard with back button
   if (showLeaderboard) {
-    drawLeaderboardTable(isMobileDevice ? 70 : H * 0.12);
-    // Play again button at bottom
-    const btnW = fz(170), btnH = fz(40);
-    const btnY2 = H - fz(80);
+    const mobGOlb = isMobileDevice;
+    drawLeaderboardTable(mobGOlb ? 70 : H * 0.12);
+    const btnW = mobGOlb ? 160 : fz(170), btnH = mobGOlb ? 38 : fz(40);
+    const btnY2 = mobGOlb ? 340 : H - fz(80);
     playAgainBtnRect = { x: W/2 - btnW/2, y: btnY2, w: btnW, h: btnH };
     const btnGrad2 = ctx.createLinearGradient(0, btnY2, 0, btnY2+btnH);
     btnGrad2.addColorStop(0, '#00bb55');
@@ -6026,14 +6035,13 @@ function drawGameOver() {
     ctx.fillStyle = btnGrad2;
     ctx.beginPath(); ctx.roundRect(playAgainBtnRect.x, btnY2, btnW, btnH, 10); ctx.fill();
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${fz(17)}px Arial`;
+    ctx.font = `bold ${mobGOlb ? 16 : fz(17)}px Arial`;
     ctx.textAlign = 'center';
     ctx.fillText(t('playAgain'), W/2, btnY2 + btnH*0.65);
-    // Back hint
-    lbBtnRect = { x: 0, y: H - fz(35), w: W, h: fz(35) };
+    lbBtnRect = { x: 0, y: btnY2 + btnH, w: W, h: 40 };
     ctx.fillStyle = 'rgba(150,180,220,0.4)';
-    ctx.font = `${fz(12)}px Arial`;
-    ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, H - fz(10));
+    ctx.font = `${mobGOlb ? 12 : fz(12)}px Arial`;
+    ctx.fillText(currentLang === 'he' ? 'לחץ לחזרה' : 'Tap to go back', W/2, btnY2 + btnH + 24);
     return;
   }
 
