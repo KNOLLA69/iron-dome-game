@@ -5414,7 +5414,7 @@ function drawWaveTransition() {
 function drawLangToggle(baseY) {
   const langs = [{l:'he',flag:'🇮🇱',label:'עב'},{l:'en',flag:'🇺🇸',label:'EN'},{l:'de',flag:'🇩🇪',label:'DE'}];
   const mobLT = isMobileDevice;
-  const bw = mobLT ? 44 : fz(52), bh = mobLT ? 36 : fz(42), gap = mobLT ? 6 : fz(8);
+  const bw = mobLT ? 56 : fz(52), bh = mobLT ? 44 : fz(42), gap = mobLT ? 8 : fz(8);
   const totalW = langs.length * bw + (langs.length-1) * gap;
   const sx = W/2 - totalW/2;
   langBtnRects = [];
@@ -5439,13 +5439,13 @@ function drawLangToggle(baseY) {
       ctx.beginPath(); ctx.roundRect(bx, baseY, bw, bh, 10); ctx.stroke();
     }
     // Flag emoji (large)
-    ctx.font = `${mobLT ? 20 : fz(22)}px Arial`;
+    ctx.font = `${mobLT ? 24 : fz(22)}px Arial`;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
     ctx.fillText(lang.flag, bx + bw/2, baseY + bh*0.48);
     // Label below flag
     ctx.fillStyle = active ? '#fff' : '#8899aa';
-    ctx.font = `bold ${mobLT ? 9 : fz(10)}px Arial`;
+    ctx.font = `bold ${mobLT ? 11 : fz(10)}px Arial`;
     ctx.fillText(lang.label, bx + bw/2, baseY + bh*0.82);
     langBtnRects.push({x: bx, y: baseY, w: bw, h: bh, lang: lang.l});
   });
@@ -5582,7 +5582,7 @@ function drawMenu() {
   ctx.fillRect(0,0,W,H);
 
   // Language toggle at top center
-  drawLangToggle(isMobileDevice ? 10 : fz(10));
+  drawLangToggle(isMobileDevice ? 16 : fz(10));
 
   if (showLeaderboard) {
     const lbBottom = drawLeaderboardTable(isMobileDevice ? 80 : H * 0.15) || 300;
@@ -5602,12 +5602,14 @@ function drawMenu() {
   // Vertically center menu content
   const btnGapM = mobM ? 10 : fz(10);
   const totalMenuH = mobM
-    ? (38 + 20 + 42 + 12 + bigBtnH*3 + btnGapM*2 + 16 + 26 + 14 + 14 + 36 + 12 + 26)
-    : (fz(38) + fz(22) + fz(44) + fz(10) + bigBtnH*3 + fz(10)*2 + fz(18) + fz(28) + fz(14) + fz(14) + fz(40) + fz(12) + fz(30));
-  // Flags end at 10+36=46 on mobile. Need title below with gap.
-  const langToggleBottom = mobM ? (10 + 36 + 24 + 38) : (fz(10) + fz(42) + fz(8) + fz(38));
-  // Center content vertically, but clamp so it stays below flags
-  let curY = Math.max(langToggleBottom, (H - totalMenuH) / 2);
+    ? (38 + 22 + 56 + 14 + bigBtnH*3 + btnGapM*2 + 16 + 26 + 14 + 14 + 36 + 12 + 26)
+    : (fz(38) + fz(22) + fz(50) + fz(12) + bigBtnH*3 + fz(10)*2 + fz(18) + fz(28) + fz(14) + fz(14) + fz(40) + fz(12) + fz(30));
+  // Flags end at 16+44=60 on mobile. Title baseline needs font height below that + gap.
+  const langToggleBottom = mobM ? (16 + 44 + 30 + 38) : (fz(10) + fz(42) + fz(8) + fz(38));
+  // Mobile: center vertically but cap so not too far from top
+  let curY = mobM
+    ? Math.min(Math.max(langToggleBottom, (H - totalMenuH) / 2), langToggleBottom + 60)
+    : Math.max(langToggleBottom, (H - totalMenuH) / 2);
 
   // Title with glow
   const titleY = curY;
@@ -5627,9 +5629,9 @@ function drawMenu() {
   curY = titleY + (mobM ? 40 : fz(42));
 
   // Champion badges — All-Time + Weekly side by side
-  const badgeGap = mobM ? 8 : fz(10);
-  const badgeW = mobM ? Math.min((W - badgeGap * 3) / 2, 180) : fz(160);
-  const badgeH = mobM ? 42 : fz(44);
+  const badgeGap = mobM ? 10 : fz(10);
+  const badgeW = mobM ? Math.min((W - badgeGap * 3) / 2, 200) : fz(170);
+  const badgeH = mobM ? 56 : fz(50);
   const badgeStartX = W/2 - (badgeW * 2 + badgeGap) / 2;
   const badges = [
     { data: leaderboardData, label: t('allTimeChamp'), color: '#ffdd00', icon: '🏆' },
@@ -5643,27 +5645,27 @@ function drawMenu() {
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.roundRect(bx2, curY, badgeW, badgeH, 10); ctx.stroke();
     // Label
-    ctx.fillStyle = 'rgba(150,180,220,0.5)';
-    ctx.font = `${mobM ? 9 : fz(9)}px Arial`;
+    ctx.fillStyle = 'rgba(150,180,220,0.6)';
+    ctx.font = `${mobM ? 12 : fz(10)}px Arial`;
     ctx.textAlign = 'center';
-    ctx.fillText(`${b.icon} ${b.label}`, bx2 + badgeW/2, curY + (mobM ? 13 : fz(14)));
+    ctx.fillText(`${b.icon} ${b.label}`, bx2 + badgeW/2, curY + (mobM ? 16 : fz(16)));
     // Champion name + score
     if (b.data.length > 0) {
       const champ = b.data[0];
       const flag = countryFlag(champ.country);
       ctx.fillStyle = b.color;
-      ctx.font = `bold ${mobM ? 12 : fz(11)}px Arial`;
-      ctx.fillText(`${champ.name} ${flag}`, bx2 + badgeW/2, curY + (mobM ? 27 : fz(28)));
-      ctx.fillStyle = 'rgba(200,200,220,0.6)';
-      ctx.font = `${mobM ? 10 : fz(10)}px Arial`;
-      ctx.fillText(`${champ.score}`, bx2 + badgeW/2, curY + (mobM ? 38 : fz(39)));
+      ctx.font = `bold ${mobM ? 16 : fz(13)}px Arial`;
+      ctx.fillText(`${champ.name} ${flag}`, bx2 + badgeW/2, curY + (mobM ? 34 : fz(32)));
+      ctx.fillStyle = 'rgba(220,220,240,0.7)';
+      ctx.font = `bold ${mobM ? 13 : fz(11)}px Arial`;
+      ctx.fillText(`${champ.score}`, bx2 + badgeW/2, curY + (mobM ? 50 : fz(45)));
     } else {
       ctx.fillStyle = '#666';
-      ctx.font = `${mobM ? 10 : fz(10)}px Arial`;
-      ctx.fillText('—', bx2 + badgeW/2, curY + (mobM ? 30 : fz(30)));
+      ctx.font = `${mobM ? 13 : fz(11)}px Arial`;
+      ctx.fillText('—', bx2 + badgeW/2, curY + (mobM ? 36 : fz(32)));
     }
   });
-  curY += badgeH + (mobM ? 12 : fz(10));
+  curY += badgeH + (mobM ? 14 : fz(12));
 
   // ===== BIG BUTTONS =====
   const bx = W/2 - bigBtnW/2;
