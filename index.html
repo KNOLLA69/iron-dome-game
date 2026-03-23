@@ -1006,7 +1006,7 @@ const DESIGN_W = 1100; // original design width for scaling
 const scaleX = W / DESIGN_W;
 const fontS = isMobileDevice ? 1.6 : 1; // font scale for mobile readability
 function fz(px) { return Math.round(px * fontS); } // scaled font size helper
-const GROUND_Y = H - 55;
+const GROUND_Y = isMobileDevice ? H - 150 : H - 55;
 const SEA_Y = GROUND_Y + 5;
 const batteryX = W / 2;
 const batteryY = GROUND_Y - 15;
@@ -1973,6 +1973,7 @@ let tokenBank = 0, consecutiveHits = 0;
 let activeDefenseSystem = null; // 'iron_beam' or 'davids_sling'
 let defenseSystemTimer = 0, defenseSystemKills = 0, defenseSystemMaxKills = 0;
 let defenseSystemTarget = null;
+let defenseFlightProgress = 0; // 0→1 flight from battery to target (Sling only)
 // War Room panel button hit rects (set during draw, used for click detection)
 let beamBtnRect = null, slingBtnRect = null;
 // Legacy power-up arrays kept for cleanup
@@ -2481,15 +2482,17 @@ function handleClick() {
       if (isInBtn(mouseX, mouseY, {x: rbX, y: rbY, w: rbW, h: rbH})) { paused = false; }
       return;
     }
-    // War Room panel button clicks (desktop only)
-    if (!isMobileDevice && beamBtnRect && isInBtn(mouseX, mouseY, beamBtnRect)) {
+    // Defense button clicks (desktop panels + mobile bottom bar)
+    if (beamBtnRect && isInBtn(mouseX, mouseY, beamBtnRect)) {
       activateDefenseSystem('iron_beam'); return;
     }
-    if (!isMobileDevice && slingBtnRect && isInBtn(mouseX, mouseY, slingBtnRect)) {
+    if (slingBtnRect && isInBtn(mouseX, mouseY, slingBtnRect)) {
       activateDefenseSystem('davids_sling'); return;
     }
-    // Don't fire interceptor if clicking inside panels
+    // Don't fire interceptor if clicking inside panels (desktop only)
     if (!isMobileDevice && (mouseX < PANEL_W || mouseX > W - PANEL_W)) return;
+    // Don't fire if clicking in mobile bottom bar area
+    if (isMobileDevice && mouseY > GROUND_Y - fz(10)) return;
     if (waveState === 'playing') fireInterceptor();
   }
 }
@@ -2615,7 +2618,7 @@ function startGame() {
   powerUps = [];
   launcherReloading = false; launcherReloadTimer = 0; launcherReloadDuration = 0;
   tokenBank = 0; consecutiveHits = 0;
-  activeDefenseSystem = null; defenseSystemTimer = 0; defenseSystemKills = 0; defenseSystemTarget = null;
+  activeDefenseSystem = null; defenseSystemTimer = 0; defenseSystemKills = 0; defenseSystemTarget = null; defenseFlightProgress = 0;
   ammo = LAUNCHER_POD_SIZE; maxAmmo = LAUNCHER_POD_SIZE;
   cityDamage = 0; killFeed = [];
   killCounts = { rocket: 0, drone: 0, ballistic: 0, decoy: 0 };
@@ -2794,10 +2797,13 @@ function spawnMissile(forceType) {
   const cfg = getWaveConfig(wave);
   const type = forceType || pickEnemyType();
   const et = ENEMY_TYPES[type];
-  const startX = Math.random() * W;
+  const gameLeft = PANEL_W + 20;  // avoid spawning behind panels
+  const gameRight = W - PANEL_W - 20;
+  const gameW = gameRight - gameLeft;
+  const startX = gameLeft + Math.random() * gameW;
   const startY = -10;
   const speed = (cfg.missileSpeed + Math.random()*0.4) * et.speedMult;
-  const targetX = 50 + Math.random()*(W-100);
+  const targetX = gameLeft + Math.random() * gameW;
   const targetY = GROUND_Y;
   const dx = targetX - startX, dy = targetY - startY;
   const dist = Math.sqrt(dx*dx + dy*dy);
@@ -2953,6 +2959,7 @@ function activateDefenseSystem(type) {
   defenseSystemMaxKills = type === 'iron_beam' ? IRON_BEAM_MAX_KILLS : DAVIDS_SLING_MAX_KILLS;
   defenseSystemTimer = 0;
   defenseSystemTarget = null;
+  defenseFlightProgress = 0;
   playSound(type === 'iron_beam' ? 'combo' : 'launch');
 }
 
@@ -3243,41 +3250,78 @@ function update() {
   // Active defense system tick (Iron Beam / David's Sling)
   if (activeDefenseSystem) {
     defenseSystemTimer++;
-    const killInterval = activeDefenseSystem === 'iron_beam' ? IRON_BEAM_KILL_INTERVAL : DAVIDS_SLING_KILL_INTERVAL;
-    if (defenseSystemTimer % killInterval === 0 || defenseSystemTimer === 1) {
-      let validTargets;
-      if (activeDefenseSystem === 'iron_beam') {
-        validTargets = missiles.filter(m => (m.type === 'rocket' || m.type === 'drone') && m.y > 0 && m.y < GROUND_Y);
-      } else {
-        validTargets = missiles.filter(m => m.type === 'ballistic' && m.y > 0 && m.y < GROUND_Y);
-      }
-      if (validTargets.length > 0 && defenseSystemKills < defenseSystemMaxKills) {
-        validTargets.sort((a, b) => b.y - a.y); // closest to ground first
-        const target = validTargets[0];
-        defenseSystemTarget = target;
-        const idx = missiles.indexOf(target);
-        if (idx !== -1) {
-          addCombo();
-          const mult = getMultiplier();
-          const pts = target.points * mult;
-          score += pts;
-          if (activeDefenseSystem === 'iron_beam') {
+    if (activeDefenseSystem === 'iron_beam') {
+      // Iron Beam: instant laser kill (unchanged)
+      const killInterval = IRON_BEAM_KILL_INTERVAL;
+      if (defenseSystemTimer % killInterval === 0 || defenseSystemTimer === 1) {
+        const validTargets = missiles.filter(m => (m.type === 'rocket' || m.type === 'drone') && m.y > 0 && m.y < GROUND_Y);
+        if (validTargets.length > 0 && defenseSystemKills < defenseSystemMaxKills) {
+          validTargets.sort((a, b) => b.y - a.y);
+          const target = validTargets[0];
+          defenseSystemTarget = target;
+          const idx = missiles.indexOf(target);
+          if (idx !== -1) {
+            addCombo();
+            const mult = getMultiplier();
+            const pts = target.points * mult;
+            score += pts;
             boom(target.x, target.y, '#00ffff', 15);
-          } else {
-            boom(target.x, target.y, '#ff8800', 30, true);
+            let text = '+' + pts;
+            if (mult > 1) text += ' (x' + mult + ')';
+            addFloat(target.x, target.y - 10, text, '#00ffff', 18);
+            if (killCounts[target.type] !== undefined) killCounts[target.type]++;
+            missiles.splice(idx, 1);
+            defenseSystemKills++;
           }
-          let text = '+' + pts;
-          if (mult > 1) text += ' (x' + mult + ')';
-          addFloat(target.x, target.y - 10, text, '#00ffff', 18);
-          if (killCounts[target.type] !== undefined) killCounts[target.type]++;
-          missiles.splice(idx, 1);
-          defenseSystemKills++;
-          shotsHit++;
+        } else {
+          defenseSystemTarget = null; // clear target between kills so laser doesn't hang
         }
+        if (defenseSystemKills >= defenseSystemMaxKills || validTargets.length === 0) {
+          activeDefenseSystem = null; defenseSystemTarget = null;
+        }
+      } else {
+        defenseSystemTarget = null; // no laser between kill intervals
       }
-      if (defenseSystemKills >= defenseSystemMaxKills || (validTargets && validTargets.length === 0)) {
-        activeDefenseSystem = null;
-        defenseSystemTarget = null;
+    } else {
+      // David's Sling: projectile flies from battery to target, then kills on impact
+      const SLING_FLIGHT_FRAMES = 30; // ~0.5s flight time
+      if (!defenseSystemTarget) {
+        // Acquire next target
+        const validTargets = missiles.filter(m => m.type === 'ballistic' && m.y > 0 && m.y < GROUND_Y);
+        if (validTargets.length > 0 && defenseSystemKills < defenseSystemMaxKills) {
+          validTargets.sort((a, b) => b.y - a.y);
+          defenseSystemTarget = validTargets[0];
+          defenseFlightProgress = 0;
+          playSound('launch');
+        } else {
+          activeDefenseSystem = null; defenseSystemTarget = null;
+        }
+      } else {
+        // Fly toward target
+        defenseFlightProgress += 1 / SLING_FLIGHT_FRAMES;
+        if (defenseFlightProgress >= 1) {
+          // Impact — kill the target
+          const target = defenseSystemTarget;
+          const idx = missiles.indexOf(target);
+          if (idx !== -1) {
+            addCombo();
+            const mult = getMultiplier();
+            const pts = target.points * mult;
+            score += pts;
+            boom(target.x, target.y, '#ff8800', 30, true);
+            let text = '+' + pts;
+            if (mult > 1) text += ' (x' + mult + ')';
+            addFloat(target.x, target.y - 10, text, '#00ffff', 18);
+            if (killCounts[target.type] !== undefined) killCounts[target.type]++;
+            missiles.splice(idx, 1);
+            defenseSystemKills++;
+          }
+          defenseSystemTarget = null;
+          defenseFlightProgress = 0;
+          if (defenseSystemKills >= defenseSystemMaxKills) {
+            activeDefenseSystem = null;
+          }
+        }
       }
     }
   }
@@ -4448,16 +4492,158 @@ function draw() {
       ctx.globalAlpha = 1;
       ctx.restore();
     } else {
-      // David's Sling — large projectile heading to target
-      const dx = t2.x - batteryX, dy = t2.y - (batteryY - 30);
+      // === David's Sling — Stunner Interceptor (sleek two-stage design) ===
+      const bx = batteryX, by = batteryY - 30;
+      const dx = t2.x - bx, dy = t2.y - by;
       const angle = Math.atan2(dy, dx);
+      // Ease-in flight: slow launch, fast approach (quadratic)
+      const fp = Math.min(defenseFlightProgress, 1);
+      const easedFp = fp * fp; // quadratic ease-in
+      const projX = bx + dx * easedFp;
+      const projY = by + dy * easedFp;
       ctx.save();
-      ctx.translate(t2.x - Math.cos(angle) * 20, t2.y - Math.sin(angle) * 20);
+      ctx.translate(projX, projY);
       ctx.rotate(angle);
-      ctx.fillStyle = '#ff8800';
-      ctx.fillRect(-8, -3, 16, 6);
-      ctx.fillStyle = '#ffcc44';
-      ctx.fillRect(-12, -2, 4, 4);
+
+      // --- Stunner body: longer, sleeker than Tamir (no scale hack) ---
+      // Stage 1 (booster) — darker rear section
+      const boostGrad = ctx.createLinearGradient(0, -2.2, 0, 2.2);
+      boostGrad.addColorStop(0, '#8a9098');
+      boostGrad.addColorStop(0.3, '#a0a8b0');
+      boostGrad.addColorStop(0.5, '#b0b8c0');
+      boostGrad.addColorStop(0.7, '#98a0a8');
+      boostGrad.addColorStop(1, '#787e86');
+      ctx.fillStyle = boostGrad;
+      ctx.beginPath();
+      ctx.moveTo(-4, -2.2); ctx.lineTo(-12, -2); ctx.lineTo(-12.5, -1.4);
+      ctx.lineTo(-12.5, 1.4); ctx.lineTo(-12, 2); ctx.lineTo(-4, 2.2);
+      ctx.closePath(); ctx.fill();
+
+      // Stage separation ring
+      ctx.strokeStyle = 'rgba(255,160,40,0.6)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-4, -2.4); ctx.lineTo(-4, 2.4); ctx.stroke();
+
+      // Stage 2 (sustainer) — white/light front section
+      const bodyGrad = ctx.createLinearGradient(0, -2, 0, 2);
+      bodyGrad.addColorStop(0, '#c0ccd4');
+      bodyGrad.addColorStop(0.15, '#d8e4ec');
+      bodyGrad.addColorStop(0.35, '#ecf4f8');
+      bodyGrad.addColorStop(0.5, '#e0eaf0');
+      bodyGrad.addColorStop(0.75, '#c8d4dc');
+      bodyGrad.addColorStop(1, '#a8b4bc');
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.moveTo(10, -1.6); ctx.lineTo(-4, -2.2); ctx.lineTo(-4, 2.2); ctx.lineTo(10, 1.6);
+      ctx.closePath(); ctx.fill();
+
+      // Seeker dome — sharp ogive nose
+      ctx.fillStyle = '#3a3e44';
+      ctx.beginPath();
+      ctx.moveTo(17, 0);
+      ctx.quadraticCurveTo(14, -0.8, 10, -1.6);
+      ctx.lineTo(10, 1.6);
+      ctx.quadraticCurveTo(14, 0.8, 17, 0);
+      ctx.fill();
+      // Seeker ring
+      ctx.strokeStyle = 'rgba(80,100,120,0.5)';
+      ctx.lineWidth = 0.7;
+      ctx.beginPath(); ctx.moveTo(10.2, -1.5); ctx.lineTo(10.2, 1.5); ctx.stroke();
+
+      // Canard fins (small, swept forward near nose)
+      ctx.fillStyle = '#8898a8';
+      ctx.beginPath();
+      ctx.moveTo(7, -1.7); ctx.lineTo(6, -4.2); ctx.lineTo(4, -3.4); ctx.lineTo(5, -1.9);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(7, 1.7); ctx.lineTo(6, 4.2); ctx.lineTo(4, 3.4); ctx.lineTo(5, 1.9);
+      ctx.closePath(); ctx.fill();
+
+      // Mid-body strakes (small stabilizers at stage junction)
+      ctx.fillStyle = '#90989e';
+      ctx.beginPath();
+      ctx.moveTo(-3, -2.3); ctx.lineTo(-5, -3.5); ctx.lineTo(-6, -3); ctx.lineTo(-4.5, -2.2);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-3, 2.3); ctx.lineTo(-5, 3.5); ctx.lineTo(-6, 3); ctx.lineTo(-4.5, 2.2);
+      ctx.closePath(); ctx.fill();
+
+      // Tail fins — larger, swept delta shape
+      ctx.fillStyle = '#6a7a88';
+      ctx.beginPath();
+      ctx.moveTo(-10, -2); ctx.lineTo(-13, -6); ctx.lineTo(-10, -5); ctx.lineTo(-8.5, -2.1);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-10, 2); ctx.lineTo(-13, 6); ctx.lineTo(-10, 5); ctx.lineTo(-8.5, 2.1);
+      ctx.closePath(); ctx.fill();
+
+      // Orange body band (David's Sling signature marking)
+      ctx.fillStyle = 'rgba(255,140,30,0.35)';
+      ctx.fillRect(1, -2.1, 2.5, 4.2);
+      // Second orange band at booster
+      ctx.fillStyle = 'rgba(255,140,30,0.2)';
+      ctx.fillRect(-8, -2.1, 2, 4.2);
+
+      // Specular highlight — full length
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fillRect(-11, -1.5, 20, 0.9);
+
+      // Engine nozzle cluster (dual nozzle)
+      ctx.fillStyle = '#333840';
+      ctx.fillRect(-12.5, -1.6, 2, 1.2);
+      ctx.fillRect(-12.5, 0.4, 2, 1.2);
+
+      // Engine exhaust — dual orange-white flame plumes
+      const sExLen = 12 + Math.random() * 7;
+      // Main plume
+      const exGrad1 = ctx.createLinearGradient(-12.5, 0, -12.5 - sExLen, 0);
+      exGrad1.addColorStop(0, 'rgba(255,240,200,0.95)');
+      exGrad1.addColorStop(0.2, 'rgba(255,200,100,0.8)');
+      exGrad1.addColorStop(0.5, 'rgba(255,140,40,0.4)');
+      exGrad1.addColorStop(0.8, 'rgba(255,80,0,0.15)');
+      exGrad1.addColorStop(1, 'rgba(200,50,0,0)');
+      ctx.fillStyle = exGrad1;
+      ctx.beginPath();
+      ctx.moveTo(-12.5, -1.8); ctx.quadraticCurveTo(-12.5 - sExLen * 0.4, -0.8, -12.5 - sExLen, 0);
+      ctx.quadraticCurveTo(-12.5 - sExLen * 0.4, 0.8, -12.5, 1.8);
+      ctx.closePath(); ctx.fill();
+      // White-hot core
+      const sCoreLen = sExLen * 0.35;
+      ctx.fillStyle = 'rgba(255,250,230,0.9)';
+      ctx.beginPath();
+      ctx.moveTo(-12.5, -0.9); ctx.quadraticCurveTo(-12.5 - sCoreLen * 0.5, 0, -12.5 - sCoreLen, 0);
+      ctx.quadraticCurveTo(-12.5 - sCoreLen * 0.5, 0, -12.5, 0.9);
+      ctx.closePath(); ctx.fill();
+      // Exhaust bloom (bright circle at nozzle)
+      ctx.fillStyle = 'rgba(255,220,160,0.9)';
+      ctx.beginPath(); ctx.arc(-13, 0, 2.5, 0, Math.PI * 2); ctx.fill();
+
+      ctx.restore();
+
+      // Orange glow halo around projectile
+      const sGlow = ctx.createRadialGradient(projX, projY, 0, projX, projY, 22);
+      sGlow.addColorStop(0, 'rgba(255,180,60,0.15)');
+      sGlow.addColorStop(0.5, 'rgba(255,130,30,0.06)');
+      sGlow.addColorStop(1, 'rgba(255,80,0,0)');
+      ctx.fillStyle = sGlow;
+      ctx.beginPath(); ctx.arc(projX, projY, 22, 0, Math.PI * 2); ctx.fill();
+
+      // Trail from battery — scattered orange particles with glow
+      ctx.save();
+      const trailLen = 14;
+      for (let ti = 0; ti < trailLen; ti++) {
+        const frac = ti / trailLen;
+        const tx = batteryX + (projX - batteryX) * frac;
+        const ty = (batteryY - 30) + (projY - (batteryY - 30)) * frac;
+        const jx = (Math.sin(ti * 7.3 + frame * 0.1) * 2) * frac;
+        const jy = (Math.cos(ti * 5.1 + frame * 0.13) * 2) * frac;
+        // Outer glow
+        ctx.fillStyle = `rgba(255,150,40,${0.06 * (1 - frac)})`;
+        ctx.beginPath(); ctx.arc(tx + jx, ty + jy, 8 + frac * 6, 0, Math.PI * 2); ctx.fill();
+        // Inner bright core
+        ctx.fillStyle = `rgba(255,220,140,${0.55 * (1 - frac)})`;
+        ctx.beginPath(); ctx.arc(tx + jx, ty + jy, 1.5 + frac * 1.5, 0, Math.PI * 2); ctx.fill();
+      }
       ctx.restore();
     }
   }
@@ -4639,7 +4825,7 @@ function drawCityIntro() {
 
 function drawLeftPanel() {
   // Background
-  ctx.fillStyle = 'rgba(0, 8, 20, 0.78)';
+  ctx.fillStyle = 'rgba(0, 8, 20, 0.85)';
   ctx.fillRect(0, 0, PANEL_W, GROUND_Y);
   // Cyan edge glow
   const edgeGlow = ctx.createLinearGradient(PANEL_W - 8, 0, PANEL_W + 4, 0);
@@ -4655,6 +4841,30 @@ function drawLeftPanel() {
   const lx = 10;
   const panelInnerW = PANEL_W - 20;
   let y = 16;
+
+  // ---- PAUSE BUTTON (top-right of left panel) ----
+  const pbS = 22;
+  const pbX = PANEL_W - pbS - 8, pbY = 8;
+  pauseBtnRect = { x: pbX, y: pbY, w: pbS, h: pbS };
+  ctx.fillStyle = paused ? 'rgba(100,200,255,0.2)' : 'rgba(50,60,80,0.4)';
+  ctx.beginPath(); ctx.roundRect(pbX, pbY, pbS, pbS, 4); ctx.fill();
+  ctx.strokeStyle = paused ? 'rgba(100,200,255,0.4)' : 'rgba(80,100,130,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(pbX, pbY, pbS, pbS, 4); ctx.stroke();
+  if (paused) {
+    // Play triangle
+    ctx.fillStyle = 'rgba(100,220,255,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(pbX + pbS*0.35, pbY + pbS*0.2);
+    ctx.lineTo(pbX + pbS*0.35, pbY + pbS*0.8);
+    ctx.lineTo(pbX + pbS*0.75, pbY + pbS*0.5);
+    ctx.closePath(); ctx.fill();
+  } else {
+    // Pause bars
+    ctx.fillStyle = 'rgba(180,200,230,0.7)';
+    ctx.fillRect(pbX + pbS*0.27, pbY + pbS*0.22, pbS*0.16, pbS*0.56);
+    ctx.fillRect(pbX + pbS*0.57, pbY + pbS*0.22, pbS*0.16, pbS*0.56);
+  }
 
   // ---- CITY + WAVE ----
   const cName = CITIES[currentCityIdx] ? (CITIES[currentCityIdx].name[currentLang] || CITIES[currentCityIdx].name.en) : '';
@@ -4674,7 +4884,7 @@ function drawLeftPanel() {
   y += 34;
 
   // ---- CITY ENDURANCE ----
-  ctx.fillStyle = 'rgba(100,150,200,0.3)';
+  ctx.fillStyle = 'rgba(160,195,235,0.7)';
   ctx.font = '7px Arial';
   ctx.fillText('ENDURANCE', lx, y);
   y += 6;
@@ -4742,7 +4952,7 @@ function drawLeftPanel() {
   y += 8;
 
   // ---- LAUNCHER ----
-  ctx.fillStyle = 'rgba(100,150,200,0.3)';
+  ctx.fillStyle = 'rgba(160,195,235,0.7)';
   ctx.font = '7px Arial';
   ctx.fillText('LAUNCHER', lx, y);
   y += 8;
@@ -4779,7 +4989,7 @@ function drawLeftPanel() {
   ctx.font = 'bold 12px Arial';
   ctx.textAlign = 'left';
   ctx.fillText('' + ammo, lx, y + 12);
-  ctx.fillStyle = 'rgba(120,160,120,0.35)';
+  ctx.fillStyle = 'rgba(150,190,150,0.55)';
   ctx.font = '9px Arial';
   ctx.fillText('/ ' + LAUNCHER_POD_SIZE, lx + 20, y + 12);
   y += 18;
@@ -4813,25 +5023,25 @@ function drawLeftPanel() {
   y += 8;
 
   // ---- ACCURACY ----
-  ctx.fillStyle = 'rgba(100,150,200,0.3)';
+  ctx.fillStyle = 'rgba(160,195,235,0.7)';
   ctx.font = '7px Arial';
   ctx.textAlign = 'left';
   ctx.fillText('ACCURACY', lx, y);
   y += 6;
 
-  const accuracy = shotsFired > 0 ? Math.round(shotsHit / shotsFired * 100) : 0;
+  const accuracy = shotsFired > 0 ? Math.min(100, Math.round(shotsHit / shotsFired * 100)) : 0;
   const accColor = accuracy >= 70 ? '#22dd77' : accuracy >= 40 ? '#ffcc33' : '#ff4444';
   const accBarW = panelInnerW, accBarH = 5;
   ctx.fillStyle = 'rgba(40,50,60,0.3)';
   ctx.beginPath(); ctx.roundRect(lx, y, accBarW, accBarH, 2); ctx.fill();
   ctx.fillStyle = accColor;
-  ctx.beginPath(); ctx.roundRect(lx, y, accBarW * (accuracy / 100), accBarH, 2); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(lx, y, accBarW * Math.min(1, accuracy / 100), accBarH, 2); ctx.fill();
   y += accBarH + 4;
 
   ctx.fillStyle = accColor;
   ctx.font = 'bold 14px Arial';
   ctx.fillText(accuracy + '%', lx, y + 12);
-  ctx.fillStyle = 'rgba(180,200,220,0.4)';
+  ctx.fillStyle = 'rgba(200,220,240,0.6)';
   ctx.font = '9px Arial';
   ctx.fillText(shotsHit + ' / ' + shotsFired, lx + 42, y + 12);
   y += 20;
@@ -4843,7 +5053,7 @@ function drawLeftPanel() {
   y += 8;
 
   // ---- KILL STATS ----
-  ctx.fillStyle = 'rgba(100,150,200,0.3)';
+  ctx.fillStyle = 'rgba(160,195,235,0.7)';
   ctx.font = '7px Arial';
   ctx.fillText('INTERCEPTS', lx, y);
   y += 10;
@@ -4878,7 +5088,7 @@ function drawRightPanel() {
   const px = W - PANEL_W;
 
   // Background
-  ctx.fillStyle = 'rgba(0, 8, 20, 0.78)';
+  ctx.fillStyle = 'rgba(0, 8, 20, 0.85)';
   ctx.fillRect(px, 0, PANEL_W, GROUND_Y);
   // Cyan edge glow
   const rEdgeGlow = ctx.createLinearGradient(px - 4, 0, px + 8, 0);
@@ -4942,7 +5152,7 @@ function drawRightPanel() {
   y += 8;
 
   // ---- INCOMING ----
-  ctx.fillStyle = 'rgba(100,150,200,0.35)';
+  ctx.fillStyle = 'rgba(160,195,235,0.75)';
   ctx.font = '7px Arial';
   ctx.textAlign = 'left';
   ctx.fillText('INCOMING', rx, y);
@@ -4953,7 +5163,7 @@ function drawRightPanel() {
   ctx.fillStyle = enemyColor;
   ctx.font = 'bold 22px Arial';
   ctx.fillText('' + enemiesLeft, rx, y + 18);
-  ctx.fillStyle = 'rgba(120,160,200,0.3)';
+  ctx.fillStyle = 'rgba(160,190,220,0.5)';
   ctx.font = '10px Arial';
   ctx.fillText('/ ' + enemiesTotal, rx + 30, y + 18);
   y += 24;
@@ -4989,7 +5199,7 @@ function drawRightPanel() {
   const hasTokens = tokenBank > 0;
 
   // Token pips
-  ctx.fillStyle = 'rgba(100,150,200,0.3)';
+  ctx.fillStyle = 'rgba(160,195,235,0.7)';
   ctx.font = '7px Arial';
   ctx.textAlign = 'left';
   ctx.fillText('TOKENS', rx, y);
@@ -5193,21 +5403,7 @@ function drawHUD() {
   ctx.fillText(`${cityDamage}/${cityMaxHP}`, hpX + hpW + fz(4), hpY + hpH);
   // Shield removed — defense token system
 
-  // -- Launcher pod ammo (center) --
-  if (waveState === 'playing') {
-    ctx.textAlign = 'center';
-    const ammoColor = launcherReloading ? '#ffaa33' : ammo <= 5 ? '#ff4444' : 'rgba(120,190,255,0.8)';
-    ctx.fillStyle = ammoColor;
-    ctx.font = `bold ${fz(14)}px Arial`;
-    const ammoText = launcherReloading ? t('reloading') : `${ammo}/${LAUNCHER_POD_SIZE}`;
-    ctx.fillText(ammoText, W/2, barH * 0.65);
-    const missilesInPlay = waveMissilesLeft + missiles.length;
-    if (missilesInPlay > 0) {
-      ctx.fillStyle = 'rgba(120,190,255,0.4)';
-      ctx.font = `${fz(7)}px Arial`;
-      ctx.fillText(`${missilesInPlay} ${t('missiles')}`, W/2, barH * 0.88);
-    }
-  }
+  // Ammo now shown in bottom bar on mobile — top strip center is free
 
   // -- Score (right, big + glowing) --
   ctx.save();
@@ -5217,23 +5413,129 @@ function drawHUD() {
   ctx.shadowBlur = 12;
   ctx.fillStyle = '#fff';
   ctx.font = `bold ${fz(24)}px Arial`;
-  ctx.fillText(`${score}`, sX, barH * 0.6);
+  ctx.fillText(`${score}`, sX, barH * 0.45);
   ctx.shadowBlur = 0;
   ctx.restore();
   ctx.fillStyle = 'rgba(150,180,220,0.4)';
   ctx.font = `bold ${fz(7)}px Arial`;
   ctx.textAlign = 'right';
-  ctx.fillText(t('score').toUpperCase(), sX, barH * 0.85);
+  ctx.fillText(t('score').toUpperCase(), sX, barH * 0.62);
 
-  // ===== TOKEN BANK + DEFENSE SYSTEM (below bar, left) =====
-  { const py = barH + 3;
-    for (let ti = 0; ti < TOKEN_BANK_MAX; ti++) { const tx = fz(8) + ti * fz(14); ctx.fillStyle = ti < tokenBank ? 'rgba(255,220,0,0.8)' : 'rgba(100,100,100,0.3)'; ctx.beginPath(); ctx.arc(tx + fz(5), py + fz(6), fz(5), 0, Math.PI*2); ctx.fill(); if (ti < tokenBank) { ctx.fillStyle = '#ffdd00'; ctx.font = `bold ${fz(6)}px Arial`; ctx.textAlign = 'center'; ctx.fillText('⚡', tx + fz(5), py + fz(8)); } }
-    const progress = consecutiveHits % CONSECUTIVE_HITS_FOR_TOKEN;
-    if (progress > 0 && tokenBank < TOKEN_BANK_MAX) { ctx.fillStyle = 'rgba(255,220,0,0.4)'; ctx.font = `${fz(6)}px Arial`; ctx.textAlign = 'left'; ctx.fillText(`${progress}/${CONSECUTIVE_HITS_FOR_TOKEN}`, fz(8) + TOKEN_BANK_MAX * fz(14), py + fz(8)); }
-    ctx.fillStyle = 'rgba(150,200,255,0.5)'; ctx.font = `${fz(6)}px Arial`; ctx.textAlign = 'left';
-    ctx.fillText(t('pressForBeam') + '  ' + t('pressForSling'), fz(8), py + fz(17));
-    if (activeDefenseSystem) { const sysName = activeDefenseSystem === 'iron_beam' ? t('ironBeam') : t('davidsSling'); ctx.fillStyle = activeDefenseSystem === 'iron_beam' ? '#00ffff' : '#ff8800'; ctx.font = `bold ${fz(9)}px Arial`; ctx.fillText(`${sysName} ${defenseSystemKills}/${defenseSystemMaxKills}`, fz(8), py + fz(28)); }
-    if (launcherReloading) { const rlPct = 1 - (launcherReloadTimer / launcherReloadDuration); const rlS = (launcherReloadTimer / 60).toFixed(1); ctx.fillStyle = 'rgba(255,150,50,0.3)'; ctx.fillRect(fz(8), py + fz(32), fz(60), fz(6)); ctx.fillStyle = 'rgba(255,150,50,0.8)'; ctx.fillRect(fz(8), py + fz(32), fz(60) * rlPct, fz(6)); ctx.fillStyle = '#ffaa33'; ctx.font = `bold ${fz(7)}px Arial`; ctx.fillText(`${t('reloading')} ${rlS}s`, fz(8), py + fz(47)); }
+  // ===== MOBILE BOTTOM BAR =====
+  if (waveState === 'playing' || waveState === 'transition') {
+    const bbY = GROUND_Y + fz(8);
+    const bbH = H - bbY;
+    // Background
+    ctx.fillStyle = 'rgba(0, 8, 20, 0.75)';
+    ctx.fillRect(0, bbY - fz(4), W, bbH + fz(4));
+    ctx.fillStyle = 'rgba(80,160,255,0.1)';
+    ctx.fillRect(0, bbY - fz(4), W, 1);
+
+    // -- BEAM button (left side) --
+    const iconSize = fz(42);
+    const iconPad = fz(10);
+    const b1x = iconPad, b1y = bbY + (bbH - iconSize) / 2 - fz(2);
+    const beamAvail = tokenBank > 0 && !activeDefenseSystem;
+    // Button bg
+    ctx.fillStyle = beamAvail ? 'rgba(0,180,180,0.15)' : 'rgba(40,50,60,0.2)';
+    ctx.strokeStyle = beamAvail ? 'rgba(0,220,220,0.6)' : 'rgba(60,70,80,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(b1x, b1y, iconSize, iconSize, 8); ctx.fill(); ctx.stroke();
+    // Beam icon (chevrons)
+    ctx.strokeStyle = beamAvail ? '#00dddd' : 'rgba(100,120,140,0.4)';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    const bcx = b1x + iconSize/2, bcy = b1y + iconSize/2 - fz(2);
+    ctx.beginPath(); ctx.moveTo(bcx-fz(8), bcy-fz(5)); ctx.lineTo(bcx+fz(2), bcy); ctx.lineTo(bcx-fz(8), bcy+fz(5)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bcx-fz(2), bcy-fz(5)); ctx.lineTo(bcx+fz(8), bcy); ctx.lineTo(bcx-fz(2), bcy+fz(5)); ctx.stroke();
+    ctx.lineCap = 'butt';
+    // Label
+    ctx.fillStyle = beamAvail ? '#00dddd' : 'rgba(100,120,140,0.4)';
+    ctx.font = `bold ${fz(7)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText('BEAM', b1x + iconSize/2, b1y + iconSize + fz(8));
+    beamBtnRect = { x: b1x, y: b1y, w: iconSize, h: iconSize + fz(10) };
+
+    // -- SLING button (right side) --
+    const b2x = W - iconPad - iconSize, b2y = b1y;
+    const slingAvail = tokenBank > 0 && !activeDefenseSystem;
+    ctx.fillStyle = slingAvail ? 'rgba(180,100,0,0.15)' : 'rgba(40,50,60,0.2)';
+    ctx.strokeStyle = slingAvail ? 'rgba(220,130,0,0.6)' : 'rgba(60,70,80,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(b2x, b2y, iconSize, iconSize, 8); ctx.fill(); ctx.stroke();
+    // Sling icon (arrow up)
+    ctx.strokeStyle = slingAvail ? '#ff8800' : 'rgba(100,120,140,0.4)';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    const scx = b2x + iconSize/2, scy = b2y + iconSize/2 - fz(2);
+    ctx.beginPath(); ctx.moveTo(scx, scy+fz(8)); ctx.lineTo(scx, scy-fz(6)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(scx-fz(6), scy-fz(1)); ctx.lineTo(scx, scy-fz(8)); ctx.lineTo(scx+fz(6), scy-fz(1)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(scx-fz(3), scy+fz(2)); ctx.lineTo(scx, scy-fz(4)); ctx.lineTo(scx+fz(3), scy+fz(2)); ctx.stroke();
+    ctx.lineCap = 'butt';
+    ctx.fillStyle = slingAvail ? '#ff8800' : 'rgba(100,120,140,0.4)';
+    ctx.font = `bold ${fz(7)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText('SLING', b2x + iconSize/2, b2y + iconSize + fz(8));
+    slingBtnRect = { x: b2x, y: b2y, w: iconSize, h: iconSize + fz(10) };
+
+    // -- CENTER: just ammo + enemies (clean, 2 lines) --
+    ctx.textAlign = 'center';
+    // Line 1: Ammo (big)
+    if (launcherReloading) {
+      ctx.fillStyle = '#ffaa33';
+      ctx.font = `bold ${fz(14)}px Arial`;
+      ctx.fillText(t('reloading'), W/2, bbY + fz(22));
+    } else {
+      const ammoColor2 = ammo <= 5 ? '#ff4444' : '#e0ecff';
+      ctx.fillStyle = ammoColor2;
+      ctx.font = `bold ${fz(18)}px Arial`;
+      ctx.fillText(`${ammo}`, W/2, bbY + fz(22));
+      ctx.fillStyle = 'rgba(160,195,235,0.4)';
+      ctx.font = `${fz(8)}px Arial`;
+      ctx.fillText(`/ ${LAUNCHER_POD_SIZE}`, W/2, bbY + fz(32));
+    }
+    // Line 2: Enemies left (below ammo, smaller)
+    const missilesInPlay = waveMissilesLeft + missiles.length;
+    ctx.fillStyle = missilesInPlay > 10 ? 'rgba(200,220,255,0.4)' : missilesInPlay > 5 ? '#ffcc33' : '#ff4444';
+    ctx.font = `${fz(8)}px Arial`;
+    ctx.fillText(`left ${missilesInPlay}`, W/2, bbY + fz(42));
+
+    // Token dots — single row, centered between buttons
+    const tokSpacing = fz(12);
+    const tokStartX = W/2 - ((TOKEN_BANK_MAX - 1) * tokSpacing) / 2;
+    const tokY = bbY + fz(52);
+    for (let ti = 0; ti < TOKEN_BANK_MAX; ti++) {
+      const tx = tokStartX + ti * tokSpacing;
+      if (ti < tokenBank) {
+        ctx.fillStyle = 'rgba(255,220,0,0.85)';
+        ctx.beginPath(); ctx.arc(tx, tokY, fz(4), 0, Math.PI*2); ctx.fill();
+      } else {
+        ctx.strokeStyle = 'rgba(100,100,100,0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2,2]);
+        ctx.beginPath(); ctx.arc(tx, tokY, fz(4), 0, Math.PI*2); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // Active defense indicator
+    if (activeDefenseSystem) {
+      const sysName = activeDefenseSystem === 'iron_beam' ? 'BEAM' : 'SLING';
+      const sysColor = activeDefenseSystem === 'iron_beam' ? '#00ffff' : '#ff8800';
+      ctx.fillStyle = sysColor;
+      ctx.font = `bold ${fz(9)}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.fillText(`${sysName} ${defenseSystemKills}/${defenseSystemMaxKills}`, W/2, bbY + fz(44));
+    }
+
+    // Reload indicator
+    if (launcherReloading) {
+      const rlPct = 1 - (launcherReloadTimer / launcherReloadDuration);
+      ctx.fillStyle = 'rgba(255,150,50,0.2)';
+      ctx.fillRect(W/2 - fz(40), bbY + fz(46), fz(80), fz(5));
+      ctx.fillStyle = 'rgba(255,150,50,0.8)';
+      ctx.fillRect(W/2 - fz(40), bbY + fz(46), fz(80) * rlPct, fz(5));
+    }
   }
 
   // ===== COMBO (center, bigger — resets on miss not timer) =====
