@@ -1973,6 +1973,8 @@ let tokenBank = 0, consecutiveHits = 0;
 let activeDefenseSystem = null; // 'iron_beam' or 'davids_sling'
 let defenseSystemTimer = 0, defenseSystemKills = 0, defenseSystemMaxKills = 0;
 let defenseSystemTarget = null;
+// War Room panel button hit rects (set during draw, used for click detection)
+let beamBtnRect = null, slingBtnRect = null;
 // Legacy power-up arrays kept for cleanup
 let powerUps = [];
 let cityDamage = 0; // damage taken by current city (accumulates over 3 waves)
@@ -2479,6 +2481,15 @@ function handleClick() {
       if (isInBtn(mouseX, mouseY, {x: rbX, y: rbY, w: rbW, h: rbH})) { paused = false; }
       return;
     }
+    // War Room panel button clicks (desktop only)
+    if (!isMobileDevice && beamBtnRect && isInBtn(mouseX, mouseY, beamBtnRect)) {
+      activateDefenseSystem('iron_beam'); return;
+    }
+    if (!isMobileDevice && slingBtnRect && isInBtn(mouseX, mouseY, slingBtnRect)) {
+      activateDefenseSystem('davids_sling'); return;
+    }
+    // Don't fire interceptor if clicking inside panels
+    if (!isMobileDevice && (mouseX < PANEL_W || mouseX > W - PANEL_W)) return;
     if (waveState === 'playing') fireInterceptor();
   }
 }
@@ -4628,7 +4639,7 @@ function drawCityIntro() {
 
 function drawLeftPanel() {
   // Background
-  ctx.fillStyle = 'rgba(0, 8, 20, 0.55)';
+  ctx.fillStyle = 'rgba(0, 8, 20, 0.78)';
   ctx.fillRect(0, 0, PANEL_W, GROUND_Y);
   // Cyan edge glow
   const edgeGlow = ctx.createLinearGradient(PANEL_W - 8, 0, PANEL_W + 4, 0);
@@ -4867,7 +4878,7 @@ function drawRightPanel() {
   const px = W - PANEL_W;
 
   // Background
-  ctx.fillStyle = 'rgba(0, 8, 20, 0.55)';
+  ctx.fillStyle = 'rgba(0, 8, 20, 0.78)';
   ctx.fillRect(px, 0, PANEL_W, GROUND_Y);
   // Cyan edge glow
   const rEdgeGlow = ctx.createLinearGradient(px - 4, 0, px + 8, 0);
@@ -5024,6 +5035,7 @@ function drawRightPanel() {
 
   // Iron Beam icon button
   const b1x = iconsStartX, b1y = y;
+  beamBtnRect = { x: b1x, y: b1y, w: iconSize, h: iconSize };
   ctx.fillStyle = hasTokens ? 'rgba(0,180,200,0.12)' : 'rgba(0,60,70,0.06)';
   ctx.beginPath(); ctx.roundRect(b1x, b1y, iconSize, iconSize, 8); ctx.fill();
   ctx.strokeStyle = hasTokens ? 'rgba(0,220,220,0.5)' : 'rgba(0,100,100,0.12)';
@@ -5050,6 +5062,7 @@ function drawRightPanel() {
 
   // David's Sling icon button
   const b2x = iconsStartX + iconSize + iconGap, b2y = y;
+  slingBtnRect = { x: b2x, y: b2y, w: iconSize, h: iconSize };
   ctx.fillStyle = hasTokens ? 'rgba(255,140,0,0.12)' : 'rgba(80,50,0,0.06)';
   ctx.beginPath(); ctx.roundRect(b2x, b2y, iconSize, iconSize, 8); ctx.fill();
   ctx.strokeStyle = hasTokens ? 'rgba(255,160,0,0.5)' : 'rgba(100,70,0,0.12)';
@@ -5453,12 +5466,12 @@ function drawLangToggle(baseY) {
 
 function drawLeaderboardTable(baseY) {
   const mobLB = isMobileDevice;
-  const tabSz = mobLB ? 13 : fz(13);
-  const titleSz = mobLB ? 22 : fz(22);
-  const entrySz = mobLB ? 18 : fz(17);
-  const topSz = mobLB ? 20 : fz(19);
-  const waveSz = mobLB ? 12 : fz(12);
-  const rowH = mobLB ? 32 : fz(30);
+  const tabSz = mobLB ? 15 : fz(13);
+  const titleSz = mobLB ? 24 : fz(22);
+  const entrySz = mobLB ? 20 : fz(17);
+  const topSz = mobLB ? 22 : fz(19);
+  const waveSz = mobLB ? 13 : fz(12);
+  const rowH = mobLB ? 36 : fz(30);
 
   // ===== TAB BUTTONS =====
   const tabLabels = [
@@ -5466,8 +5479,8 @@ function drawLeaderboardTable(baseY) {
     { id: 'weekly', label: `📅 ${t('weeklyLB')}` }
   ];
   ctx.font = `bold ${tabSz}px Arial`;
-  const tabPad = mobLB ? 14 : fz(16);
-  const tabH = mobLB ? 28 : fz(28);
+  const tabPad = mobLB ? 16 : fz(16);
+  const tabH = mobLB ? 34 : fz(28);
   const tabWidths = tabLabels.map(tl => ctx.measureText(tl.label).width + tabPad * 2);
   const tabGap = mobLB ? 6 : fz(6);
   const tabTotalW = tabWidths.reduce((a, b) => a + b, 0) + tabGap;
@@ -5492,7 +5505,7 @@ function drawLeaderboardTable(baseY) {
   });
 
   // ===== TITLE =====
-  const contentY = tabY + tabH + (mobLB ? 12 : fz(12));
+  const contentY = tabY + tabH + (mobLB ? 30 : fz(16));
   const isWeekly = leaderboardTab === 'weekly';
   const data = isWeekly ? weeklyLeaderboardData : leaderboardData;
   const loading = isWeekly ? weeklyLeaderboardLoading : leaderboardLoading;
@@ -5509,7 +5522,7 @@ function drawLeaderboardTable(baseY) {
     ctx.fillText(`${t('weeklyReset')} 🇮🇱`, W/2, contentY + (mobLB ? 16 : fz(16)));
   }
 
-  const tableStartY = contentY + (isWeekly ? (mobLB ? 24 : fz(24)) : (mobLB ? 8 : fz(8)));
+  const tableStartY = contentY + (isWeekly ? (mobLB ? 32 : fz(24)) : (mobLB ? 14 : fz(8)));
 
   if (loading) {
     ctx.fillStyle = '#888';
@@ -5585,7 +5598,7 @@ function drawMenu() {
   drawLangToggle(isMobileDevice ? 16 : fz(10));
 
   if (showLeaderboard) {
-    const lbBottom = drawLeaderboardTable(isMobileDevice ? 80 : H * 0.15) || 300;
+    const lbBottom = drawLeaderboardTable(isMobileDevice ? 90 : H * 0.15) || 300;
     ctx.fillStyle = 'rgba(150,180,220,0.4)';
     ctx.font = `${isMobileDevice ? 14 : fz(13)}px Arial`;
     ctx.textAlign = 'center';
@@ -6604,7 +6617,7 @@ function drawVictory() {
   // If leaderboard is open
   if (showLeaderboard) {
     const mobV = isMobileDevice;
-    const lbBottomV = drawLeaderboardTable(mobV ? 80 : H * 0.15) || 300;
+    const lbBottomV = drawLeaderboardTable(mobV ? 90 : H * 0.15) || 300;
     const btnW = mobV ? 180 : fz(170), btnH = mobV ? 42 : fz(40);
     const btnY2 = mobV ? lbBottomV + 20 : H - fz(80);
     playAgainBtnRect = { x: W/2 - btnW/2, y: btnY2, w: btnW, h: btnH };
@@ -6736,7 +6749,7 @@ function drawGameOver() {
   // If leaderboard is open, show full-screen leaderboard with back button
   if (showLeaderboard) {
     const mobGOlb = isMobileDevice;
-    const lbBottomGO = drawLeaderboardTable(mobGOlb ? 80 : H * 0.15) || 300;
+    const lbBottomGO = drawLeaderboardTable(mobGOlb ? 90 : H * 0.15) || 300;
     const btnW = mobGOlb ? 180 : fz(170), btnH = mobGOlb ? 42 : fz(40);
     const btnY2 = mobGOlb ? lbBottomGO + 20 : H - fz(80);
     playAgainBtnRect = { x: W/2 - btnW/2, y: btnY2, w: btnW, h: btnH };
