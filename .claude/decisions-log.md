@@ -451,7 +451,21 @@
 - **Impact:** M6, M7, M8. New i18n keys: shareScore, shareVictory, shareYourScore. New functions: getShareText(), openShare(), drawShareButtons().
 - **Status:** IMPLEMENTED.
 
+### DECISION-046: Game Mechanics Overhaul — Launcher Pod, Altitude Cutoff, Defense Systems
+- **Date:** 2026-03-22
+- **Agent:** Mechanic
+- **Context:** Game was too easy — 4× ammo ratio, frequent power-ups including screen-clearing EMP, no real resource tension. User wanted harder, more addictive, more realistic gameplay inspired by real Israeli defense doctrine. Designed through extensive discussion with user, researching Missile Command, Vampire Survivors, and Vegas slot machine psychology.
+- **Decision:** Five interconnected system changes:
+  1. **Launcher Pod**: 20 Tamir missiles per pod (replaces flat `missiles*4` ammo). Ammo carries between waves within a city, full reload on city change. Auto-reload with defenseless window (3-6s scaling by city) when depleted.
+  2. **Altitude Cutoff**: Each enemy type has a minimum Y position below which Iron Dome cannot intercept. Drone GROUND_Y-180, Rocket GROUND_Y-120, Ballistic GROUND_Y-70, Decoy GROUND_Y-50. Creates urgency and triage decisions.
+  3. **Defense Systems** (replace Shield/Rapid/EMP): Iron Beam (מגן אור) burns rockets/drones 1-by-1 (max 4). David's Sling (קלע דוד) kills ballistics 1-by-1 (max 2, can reach below cutoff). Both storable, player-activated via keys 1/2.
+  4. **Token Earning**: Every 5 consecutive hits (no misses) = +1 defense token (max 3 bank). Rewards accuracy, creates near-miss tension.
+  5. **Combo breaks on miss only** (no timer decay, already implemented in prior session).
+- **Rationale:** Creates core tension of "20 missiles, make them count." Combo buffs (blast radius) let skilled players multi-kill to stretch ammo. Token earning rewards accuracy. Defense systems are realistic (real Israeli systems) and tactical (not win buttons). Altitude cutoff creates visible urgency.
+- **Impact:** Major overhaul of ammo, power-up, and collision systems. Old power-up code fully removed. New constants, state vars, functions, HUD elements, i18n strings added.
+- **Status:** IMPLEMENTED (2026-03-22). Verified via preview: 20-shot launcher, reload trigger, token earning, Iron Beam activation all working.
+
 > Append new decisions below this line. Always include date, context, alternatives, and rationale.
-> Number sequentially from DECISION-046 onward.
+> Number sequentially from DECISION-047 onward.
 
 ---

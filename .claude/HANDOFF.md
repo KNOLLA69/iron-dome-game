@@ -6,6 +6,37 @@
 
 ## Latest Session
 
+- **Agent:** Mechanic
+- **Date:** 2026-03-22
+- **Summary:** Major game mechanics overhaul (DECISION-046). Replaced flat ammo with 20-round launcher pods, added altitude-based interception cutoffs, replaced all 3 power-ups (Shield/Rapid/EMP) with realistic Israeli defense systems (Iron Beam + David's Sling), added defense token earning via consecutive hits.
+- **Key Changes:**
+  1. **Launcher Pod**: 20 missiles per pod. Carries between waves within city. Full reload on city change. Auto-reload (3-6s) when depleted.
+  2. **Altitude Cutoff**: Drone Y-180, Rocket Y-120, Ballistic Y-70, Decoy Y-50. Below cutoff = guaranteed hit.
+  3. **Iron Beam (מגן אור)**: Press 1. Burns rockets/drones one-by-one (max 4). Costs 1 token.
+  4. **David's Sling (קלע דוד)**: Press 2. Kills ballistics one-by-one (max 2, can reach below cutoff). Costs 1 token.
+  5. **Token earning**: 5 consecutive hits = +1 token (max 3 bank). Resets on miss.
+  6. **Performance caps** (from earlier in session): particles 200, smoke 80, explosions 15, shorter trails, throttled homing.
+- **Files Modified:**
+  - `index.html` — Complete overhaul of ammo, power-up, collision, HUD, and combo systems
+  - `.claude/decisions-log.md` — Added DECISION-046
+  - `.claude/HANDOFF.md` — This file
+- **Blocked On:** Nothing
+- **Needs Designer polish:**
+  - Iron Beam laser animation (currently basic cyan line)
+  - David's Sling projectile animation (currently basic rectangle)
+  - Launcher tube state visualization (spent vs available)
+  - Altitude cutoff zone rendering (subtle danger gradient)
+  - Token bank HUD design (currently basic circles)
+  - Enhanced city damage visuals
+- **Recommended Next Action:**
+  - **For Designer:** Visual polish on new defense systems + HUD elements listed above
+  - **For Mechanic:** Playtest full 15 waves, tune reload times and altitude cutoffs based on feel
+  - **For UX Tester:** Re-test with new mechanics, evaluate new player comprehension
+
+---
+
+## Previous Sessions
+
 - **Agent:** Marketer
 - **Date:** 2026-03-19
 - **Summary:** Completed marketing foundation (Priority 1) and key Discovery & SEO items. Domain migrated to iron-dome-game.com. OG/Twitter Card/SEO meta tags, JSON-LD structured data, Umami analytics, embed mode, sitemap, and Reddit launch content all implemented.
